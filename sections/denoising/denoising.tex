@@ -6,16 +6,14 @@ Let $X : \Omega \to \mathbb{R}^n$ and $Y : \Omega \to \mathbb{R}^n$ be random va
 We consider a corruption process $\mathcal{C}$ that maps the clean signal $X$ to the noisy observation $Y$ according to a certain noise model. This corruption process can be expressed as follows :
 
 \begin{equation}
-    Y | X \sim \mathcal{C}(X)
+    Y | X=x \sim \mathcal{C}(x)
     \label{eq:noise-model}
 \end{equation}
 
-\paragraph{Additive gaussian noise}
-
-We will consider the residual noise $B$ defined as follows :
+We will consider the residual additive noise $E$ defined as follows :
 
 \begin{equation}
-    B = Y - X
+    E = Y - X
 \end{equation}
 
 \subsection{Self-supervised denoising}
@@ -27,35 +25,15 @@ They have been first introduced by \cite{vincent_extracting_2008} and have since
 The DAE objective is thus :
 
 \begin{equation}
-    \mathcal{L}_{DAE}(\theta) = \underset{\substack{X \sim p_X \\ Y \sim N(X)}}{\mathbb{E}} \left[ \| X - f_{\theta}(Y) \|_2^2 \right]
+    \mathcal{L}_{DAE}(\theta) = \underset{\substack{X \sim p_X \\ Y | X=x \sim \mathcal{C}(x)}}{\mathbb{E}} \left[ \| X - f_{\theta}(Y) \|_2^2 \right]
 \end{equation}
-with $N$ being a random corruption process.
-
-\begin{proposition}
-    A neural network $f = D_{\sigma}$ trained under the DAE objective estimates the following quantity :
-    \begin{equation}
-        D_{\sigma}(y) \approx \mathbb{E}\left[X | Y = y\right]
-    \end{equation}
-\end{proposition}
-
-\begin{proof}
-    We have :
-    \begin{align*}
-        D_{\sigma}(y) &\approx \arg \min_z \mathbb{E}_{X|Y=y}\left[\|X - z\|_2^2\right] \\
-        &= \arg \min_z \int \|x - z\|_2^2 p(x|y) dx
-    \end{align*}
-    Taking the derivative with respect to $z$ and setting it to zero gives us :
-    \begin{align*}
-        \frac{\partial}{\partial z} \int \|x - z\|_2^2 p(x|y) dx &= \int 2(z - x) p(x|y) dx = 0 \\
-        &\Rightarrow z = \int x p(x|y) dx = \mathbb{E}[X | Y = y]
-    \end{align*}
-\end{proof}
+with $\mathcal{C}$ being a random corruption process.
 
 \subsubsection{Score-based denoising}
 
 
 \begin{definition}{Score function}
-    The score function of a random variable $X$ with probability density function $p(x)$ is defined as the gradient of the log-density with respect to $x$ :
+    % The score function of a random variable $X$ with $\mathcal{C}^1$ probability density function $p(x)$ is defined as the gradient of the log-density with respect to $x$ :
     \begin{equation}
         s_X(x) = \nabla_x \ln p(x)
     \end{equation}
@@ -86,25 +64,25 @@ This is very convenient as it avoids the need to estimate the data score functio
 
 
 
-DAEs and score matching principles have been linked together by \cite{vincent_connection_2011}. They built an objective similar to score matching but defined on clean/noisy image pair with the corruption process $N$ distribution being known.
+DAEs and score matching principles have been linked together by \cite{vincent_connection_2011}. They built an objective similar to score matching but defined on clean/noisy image pairs with the corruption process $\mathcal{C}$ distribution being known.
 
 \begin{equation}
-    \mathcal{L}_{DSM}(\theta) = \underset{X \sim p_X \\ Y \sim N(X)}{\mathbb{E}} \left[ \| s_X(Y, \theta) - s_{Y|X}(Y|X) \|_2^2 \right]
+    \mathcal{L}_{DSM}(\theta) = \underset{X \sim p_X \\ Y \sim \mathcal{C}(X)}{\mathbb{E}} \left[ \| s_X(Y, \theta) - s_{Y|X}(Y|X) \|_2^2 \right]
 \end{equation}
 
-They prove the specific case of Tweedie's formula for additive gaussian noise (see Theorem \ref{theorem:tweedie_gaussian}) which will be considered in the following.
+They prove the specific case of Tweedie's formula for additive Gaussian noise (see Theorem \ref{theorem:tweedie_Gaussian}) which will be considered in the following.
 
-\cite{alain_what_2014} further prove that when the gaussian noise level $\sigma$ tends to zero, the DAE learns the score of the data distribution as follows :
+\cite{alain_what_2014} further prove that when the Gaussian noise level $\sigma$ tends to zero, the DAE learns the score of the data distribution as follows :
 
 \begin{equation}
     f_{\theta^*}(y) = y + \sigma^2 s_X(y) + \underset{\sigma \to 0}{o}(\sigma^2)
 \end{equation}
 
-This can be generalized to a wider range of exponential family distributions thanks to Tweedie's formula \cite{efron_tweedies_2011}. We retain the two following theorems that stand for additive gaussian noise and Poisson noise respectively.
+This can be generalized to a wider range of exponential family distributions thanks to Tweedie's formula \cite{efron_tweedies_2011}. We retain the two following theorems that stand for additive Gaussian noise and Poisson noise respectively.
 
-\begin{theorem}{Tweedie's formula for additive gaussian noise}
-    \label{theorem:tweedie_gaussian}
-    Let $X$ be a random variable and $Y = X + N$ be a noisy observation of $X$ corrupted by an additive gaussian noise $N$ independent from $X$ with variance $\sigma^2$. The MMSE estimator of $X$ given $Y = y$ is given by :
+\begin{theorem}{Tweedie's formula for additive Gaussian noise}
+    \label{theorem:tweedie_Gaussian}
+    Let $X$ be a random variable and $Y = X + N$ be a noisy observation of $X$ corrupted by an additive Gaussian noise $N$ independent from $X$ with variance $\sigma^2$. The MMSE estimator of $X$ given $Y = y$ is given by :
     \begin{equation}
         \mathbb{E}\left[X | Y = y\right] = y + \sigma^2 \nabla_y \ln p(y)
     \end{equation}
@@ -133,7 +111,7 @@ This can be generalized to a wider range of exponential family distributions tha
         &= \int \frac{\partial}{\partial y} p(x) \exp\left(-\frac{||y - x||^2}{2 \sigma^2}\right) dx \\
         &= - \frac{1}{\sigma^2} \int (y - x) p(x) \phi_{\sigma}(y - x) dx \\
     \end{align*}
-    where we denote $\phi_{\sigma}$ the gaussian kernel of standard deviation $\sigma$.
+    where we denote $\phi_{\sigma}$ the Gaussian kernel of standard deviation $\sigma$.
 
     \begin{align*}
         \nabla_y \ln p(y) = \frac{p'(y)}{p(y)} &= - \frac{1}{\sigma^2} \left( \int (y - x) \frac{p(x) \phi_{\sigma}(y - x)}{p(y)} dx \right) \\
@@ -143,7 +121,7 @@ This can be generalized to a wider range of exponential family distributions tha
 \end{proof}
 
 \begin{theorem}{Tweedie's formula for Poisson noise}
-    Let $X$ be a random variable and $Y$ be a noisy observation of $X$ corrupted by poissonian noise. The MMSE estimator of $X$ given $Y = y$ is given by :
+    Let $X$ be a random variable and $Y$ be a noisy observation of $X$ corrupted by Poisson noise. The MMSE estimator of $X$ given $Y = y$ is given by :
     \begin{equation}
         \mathbb{E}\left[X | Y = y\right] = (y + 1)\exp \left( \nabla_y \ln p(y)\right)
     \end{equation}
@@ -154,7 +132,7 @@ This can be generalized to a wider range of exponential family distributions tha
     \begin{equation*}
         p(y|x) = \frac{(x)^{y} e^{-x}}{y!}
     \end{equation*}
-    Then we compute the derivative of $p(y)$:
+    Then we compute the gradient of $p(y)$:
     \begin{align*}
         \exp(\ln \nabla_y p(y)) &= \frac{p(y+1)}{p(y)} \\
         &= \frac{1}{p(y)} \int p(x) \frac{x}{y+1}\frac{x^y}{y!}e^{-x} dx \\
@@ -177,53 +155,31 @@ Given the previous proposition and theorems, one can build a link between denois
     s_Y(y) = \ln \left( \frac{D_{Poisson}(y)}{y + 1} \right) \quad \text{(Poisson noise)}
 \end{equation}
 
-We can highlight an intriguing application of \cite{kim_noise2score_nodate} who leverage this link to estimate the score function using a DAE trained under an additive gaussian noise assumption, even when the actual noise model is not gaussian. They then use the estimated score function to denoise images corrupted by other types of noise using the appropriate variant of Tweedie's formula.
+We can highlight an intriguing application of \cite{kim_noise2score_nodate} who leverage this link to estimate the score function using a DAE trained under an additive Gaussian noise assumption, even when the actual noise model is not Gaussian. They then use the estimated score function to denoise images corrupted by other types of noise using the appropriate variant of Tweedie's formula.
 
-
-\paragraph{Noise2Void / Noise2Self}
-
-The Noise2Void \cite{krull_noise2void_2019} and Noise2Self \cite{batson_noise2self_nodate} frameworks further extend the idea of training denoising models without clean targets by using only single noisy images.
-\cite{batson_noise2self_nodate} introduce the concept of \textit{$\mathcal{J}$-invariant} functions, which are functions that do not depend on certain subsets of their input.
-We train a denoising model to be $\mathcal{J}$-invariant by masking certain pixels of the input image and predicting their values based on the surrounding pixels.
-The work of \cite{krull_noise2void_2019} implements this idea by randomly masking pixels in the input image during training and using the unmasked pixels to predict the masked ones.
-This is called the \textit{blind-spot} strategy and ensures that the model does not learn to simply copy the noisy input to the output, thus learning the identity.
-
-\paragraph{Noisier2Noise}
-
-In order to leverage the lack of paired noisy images, \cite{moran_noisier2noise_2019} propose the Noisier2Noise framework which consists in adding extra noise to a single noisy image to create a pair of noisy images.
-The model is then trained to map the more noisy image to the less noisy one, learning the underlying noise model in the process.
-This learned noise model is then assumed to retrieve the clean image from a noisy observation at inference time.
-
-\paragraph{Noise2Score}
-
-The authors in \cite{kim_noise2score_nodate} propose a 2-step framework called Noise2Score. First the score function is being estimated using a DAE trained under framework closed to Noisier2Noise \cite{moran_noisier2noise_2019} where noise is embedded into the images according to the noise model and then the network learn the mapping to retrieve less noisy images.
-Then, the estimated denoised images are simply computed using the appropriate Tweedie's formula variant.
-This method is very promissing at it is at the crossroad between bayesian methods with strong mathematical background and self-supervised learning.
+\subsubsection{Stein's Unbiased Risk Estimator}
 
 \subsection{\label{sec:noise2noise}Noise2Noise}
 
-A seminal work in the denoising field is the Noise2Noise framework \cite{lehtinen_noise2noise_2018}.
+A seminal work in the denoising field is the \textbf{Noise2Noise} framework \cite{lehtinen_noise2noise_2018}.
 Noise2Noise is a denoising method at the crossroad between self-supervised methods — which learn to denoise only from noisy samples — and supervised methods — which require clean targets to learn the mapping between noisy and clean image.
 The key idea of Noise2Noise is that we learn to denoise images from pairs of noisy images instead of noisy-clean image pairs or single noisy images.
 These pairs of noisy images can be obtained in various ways depending on the application. Each pair must represent the same underlying clean image but with different realizations of the noise process.
 Hence, we use the information contained in the noisy data itself to learn how to denoise it, without ever observing clean images. \\
 
-This section will use the formalism of \ref{eq:noise-model} to present the Noise2Noise framework and its theoretical guarantees.
+This section will use the formalism of \eqref{eq:noise-model} to present the Noise2Noise framework and its theoretical guarantees.
 Let $Y^{(1)}$ and $Y^{(2)}$ be two noisy observations of the same underlying clean image $X$ obtained through the same corruption process $\mathcal{C}$ but with different realizations of the noise.
 Thus, the noisy pairs are generated according to the following noise model :
 
 \begin{equation}
-    \begin{cases}
-        Y^{(j)} | X \sim \mathcal{C}(X), \quad j = 1, 2 \\
-        Y^{(j)}  = X + B^{(j)}, \quad j = 1, 2
-    \end{cases}
+    Y^{(j)} | X \sim \mathcal{C}(X), \quad j = 1, 2
     \label{eq:additive_noise}
 \end{equation}
 
 Let $\{(Y_i^{(1)}, Y_i^{(2)})\}_{i=1}^N$ be a finite sequence of independant and statistically distributed random variables.
-For $\omega_i \in \Omega$, we denote $Y_i^{(j)}(\omega_i) = y_i^{(j)} = x_i + b_i^{(j)}$ the observed noisy images for $j = 1, 2$ and $i = 1, \dots, N$.
+We denote as $y_i^{(j)}$ the observed noisy images for $j = 1, 2$ and $i = 1, \dots, N$.
 
-We train a neural network $f_\theta$ with parameters $\theta$ to map the noisy image $y_i^{(1)} = x_i + b_i^{(1)}$ to the other noisy image $y_i^{(2)} = x_i + b_i^{(2)}$ both representing a different corruption of the same underlying clean image $x_i$ and vice versa by minimizing the following loss function :
+We train a neural network $f_\theta$ with parameters $\theta$ to map the noisy image $y_i^{(1)}$ to the other noisy image $y_i^{(2)}$ both representing a different corruption of the same underlying clean image $x_i$ and vice versa by minimizing the following loss function :
 
 \begin{equation}
     \mathcal{L}_{\text{N2N}}(\theta) = \frac{1}{2N} \sum_{i=1}^N \left[ \rho(f_\theta(y_i^{(1)}), y_i^{(2)}) + \rho(f_\theta(y_i^{(2)}), y_i^{(1)}) \right]
@@ -231,22 +187,22 @@ We train a neural network $f_\theta$ with parameters $\theta$ to map the noisy i
 \end{equation}
 with $\rho$ a loss function such as the Mean Squared Error (MSE), the Mean Absolute Error (MAE) or any other appropriate loss.
 
-The supervised counterparts of \ref{eq:n2n_loss} would be :
+The supervised counterparts of \eqref{eq:n2n_loss} would be :
 
 \begin{equation}
     \mathcal{L}_{\text{clean}}(\theta) = \frac{1}{N} \sum_{i=1}^N \rho(f_\theta(y_i), x_i) 
     \label{eq:supervised_loss}
 \end{equation}
-with $y_i = Y(\omega_i)$ being a single noisy observation of the clean image $x_i$.
+with $y_i$ being a noisy observation of the clean image $x_i$.
 
 \subsubsection{MSE loss case}
 
 \begin{theorem}
     \label{th:noise2noise_l2}
-    Minimizing \ref{eq:n2n_loss} with $\rho(x, y) = \| x - y \|_2^2$ gives the same estimator as minimizing \ref{eq:supervised_loss} as $N \to \infty$ under the following conditions :
+    Minimizing \eqref{eq:n2n_loss} with $\rho(x, y) = \| x - y \|_2^2$ gives the same estimator as minimizing \eqref{eq:supervised_loss} as $N \to \infty$ under the following conditions :
     \begin{itemize}
         \item $Y^{(1)}$ and $Y^{(2)}$ are independent given the clean image $X$ (i.e. $Y^{(1)} | X \independent Y^{(2)} | X$).
-        \item The noise has zero mean, ie $\mathbb{E}[B^{(j)}] = 0$ for $j = 1, 2$.
+        \item Noise is centered, i.e. $\mathbb{E}[Y^{(j)} | X^{(j)} = x] = x$ for $j = 1, 2$.
     \end{itemize}
 \end{theorem}
 
@@ -257,7 +213,7 @@ with $y_i = Y(\omega_i)$ being a single noisy observation of the clean image $x_
         &= \frac{1}{N} \sum_{i=1}^N \left[ \|( f_\theta(Y_i^{(1)}) - X^{(i)}) - B^{(2)} \|_2^2 \right] \\
         &= R_{N,1}^{clean}(\theta) + \frac{1}{N} \sum_{i=1}^N \left[ \| B^{(2)} \|_2^2 \right] - \frac{2}{N} \sum_{i=1}^N \left[ (f_\theta(Y_i^{(1)}) - X^{(i)})^T B^{(2)} \right]
     \end{align*}
-    However, $\frac{2}{N} \sum_{i=1}^N \left[ (f_\theta(Y_i^{(1)}) - X^{(i)})^T B^{(2)} \right] \xrightarrow[N \to \infty]{a.s.} 2 \mathbb{E} \left[ (f_\theta(Y^{(1)}) - X)^T B^{(2)} \right]$ due to the law of large numbers. This expectation vanishes under the independence and zero-mean assumptions on the noise.
+    However, $\frac{2}{N} \sum_{i=1}^N \left[ (f_\theta(Y_i^{(1)}) - X^{(i)})^T B^{(2)} \right] \xrightarrow[N \to \infty]{a.s.} 2 \mathbb{E} \left[ (f_\theta(Y^{(1)}) - X)^T B^{(2)} \right]$ by the law of large numbers. This expectation vanishes under the independence and zero-mean assumptions on the noise.
     Thus, we have :
     \begin{equation*}
         R_{N,1}^{n2n}(\theta) = R_{N,1}^{clean}(\theta) + \frac{1}{N} \sum_{i=1}^N \left[ \| B^{(2)} \|_2^2 \right] + o(1)
@@ -268,11 +224,6 @@ with $y_i = Y(\omega_i)$ being a single noisy observation of the clean image $x_
     \end{equation*}
     where we are left with the standard clean denoising empirical risk with its underlying bias and variance decomposition, and an irreductible noise variance term which has no influence as it is independent of $\theta$.
 \end{proof}
-
-\begin{remark}
-    The previous proposition can be extended to other loss functions such as the MAE loss $\rho = \| \cdot \|_1$ under the assumption that the noise distribution is symmetric with respect to zero (i.e. $B^{(j)}$ and $-B^{(j)}$ have the same distribution for $j = 1, 2$).
-    In this case, the network learns to estimate the median of the underlying clean image distribution instead of the mean as in the MSE case.
-\end{remark}
 
 \subsubsection{Poisson negative log-likelihood case}
 \label{sec:noise2noise_poisson}
@@ -319,7 +270,7 @@ Taking the negative logarithm of this likelihood gives us the Poisson negative l
 
 \begin{theorem}
     \label{th:noise2noise_poisson}
-    If $Y | X=x \sim \text{Poisson}(x)$, then minimizing \ref{eq:n2n_loss} with $\rho = \mathcal{L}_{Poisson}$ gives the same estimator as minimizing \ref{eq:supervised_loss} as $N \to \infty$ under the following conditions :
+    If $Y | X=x \sim \text{Poisson}(x)$, then minimizing \eqref{eq:n2n_loss} with $\rho = \mathcal{L}_{Poisson}$ gives the same estimator as minimizing \eqref{eq:supervised_loss} as $N \to \infty$ under the following conditions :
     \begin{itemize}
         \item $Y^{(1)}$ and $Y^{(2)}$ are independent given the clean image $X$ (i.e. $Y^{(1)} | X \independent Y^{(2)} | X$)..
     \end{itemize}
@@ -350,10 +301,13 @@ Taking the negative logarithm of this likelihood gives us the Poisson negative l
     where we are left with the standard clean poisson negative-log likelihood risk plus a constant term independent of $\theta$.
 \end{proof}
 
-In summary, having independant realizations is crucial for this framework to work.
+In summary, having independent realizations is crucial for this framework to work.
 In the case of additive noise trained under the L2 loss, the noise must also be zero-mean.
 Either way, the method is very flexible and can be applied to various noise models. \cite{lehtinen_noise2noise_2018} also mention Bernoulli noise and text removal as possible applications of their method.
 The previous propositions give theoretical guarantees that the estimator produced by the Noise2Noisemethod will be very close to the one produced by the supervised method, with similar variance and bias.
+
+% TODO extend it to the exponential family
+
 
 \begin{figure}
     \centering
@@ -395,11 +349,11 @@ We start by stating that the supervised loss of the aggregated output can be wri
     &= \frac{1}{N} \sum_{i=1}^N \frac{1}{2} \| f_{\theta}(y_i^{(1)}) - x_i \|_2^2 + \frac{1}{2} \| f_{\theta}(y_i^{(2)}) - x_i \|_2^2 - \frac{1}{4} \| f_{\theta}(y_i^{(1)}) - f_{\theta}(y_i^{(2)}) \|_2^2
 \end{align*}
 
-Theorem \ref{th:noise2noise_l2} show that the the unobserved clean image $x_i$ can be replaced by one of its noisy version $y_i^{(j)}$ in the previous expression without changing the optimal solution of the problem.
+Theorem \ref{th:noise2noise_l2} shows that the the unobserved clean image $x_i$ can be replaced by one of its noisy version $y_i^{(j)}$ in the previous expression without changing the optimal solution of the problem.
 Thus, we can rewrite the supervised loss of the aggregated output as follows :
 
 \begin{equation}
-    \mathcal{L}_{\text{consensus}}(\theta) = \frac{1}{N} \sum_{i=1}^N \frac{1}{2} \| f_{\theta}(y_i^{(1)}) - y_i^{(1)} \|_2^2 + \frac{1}{2} \| f_{\theta}(y_i^{(2)}) - y_i^{(2)} \|_2^2 - \frac{1}{4} \| f_{\theta}(y_i^{(1)}) - f_{\theta}(y_i^{(2)}) \|_2^2
+    \mathcal{L}_{\text{consensus}}(\theta) = \frac{1}{N} \sum_{i=1}^N \frac{1}{2} \| f_{\theta}(y_i^{(1)}) - y_i^{(2)} \|_2^2 + \frac{1}{2} \| f_{\theta}(y_i^{(2)}) - y_i^{(1)} \|_2^2 - \frac{1}{4} \| f_{\theta}(y_i^{(1)}) - f_{\theta}(y_i^{(2)}) \|_2^2
     \label{eq:consensus_loss}
 \end{equation}
 
@@ -442,10 +396,21 @@ The previous proposition shows that it is possible to perform binomial thinnning
 However, subsampled images expectation is not the same as the original image expectation, as well as noise variance, which means that the signal to noise ratio is higher in the subsampled images than in the original image.
 
 In the context of a known noise model, the Noise2Noise principle can be extended to approaches like \textbf{Noisier2Noise} \cite{moran_noisier2noise_2019} where we can add extra noise to a single noisy image to create a pair of noisy images with a lower noise level in the target image.
-Another approach, coined \textbf{Recorrupted2Recorrupted} aims to provide a way to simulate noisy image pairs satisfying statistical conditions from single measurements.
+
+\textbf{Noise2Void} \cite{krull_noise2void_2019} and \textbf{Noise2Self} \cite{batson_noise2self_nodate} frameworks further extend the idea of training denoising models without clean targets by using only single noisy images.
+\cite{batson_noise2self_nodate} introduce the concept of \textit{$\mathcal{J}$-invariant} functions, which are functions that do not depend on certain subsets of their input.
+We train a denoising model to be $\mathcal{J}$-invariant by masking certain pixels of the input image and predicting their values based on the surrounding pixels.
+The work of \cite{krull_noise2void_2019} implements this idea by randomly masking pixels in the input image during training and using the unmasked pixels to predict the masked ones.
+This is called the \textit{blind-spot} strategy and ensures that the model does not learn to simply copy the noisy input to the output, thus learning the identity.
+
+\cite{kim_noise2score_nodate} propose a 2-step framework called \textbf{Noise2Score}. First the score function is being estimated using a DAE trained under framework closed to Noisier2Noise where noise is embedded into the images according to the noise model and then the network learn the mapping to retrieve less noisy images.
+Then, the estimated denoised images are simply computed using the appropriate Tweedie's formula variant.
+This method is very promissing at it is at the crossroad between bayesian methods with strong mathematical background and self-supervised learning.
+
+Another approach, coined \textbf{Recorrupted2Recorrupted} \cite{Pang2021} aims to provide a way to simulate noisy image pairs satisfying statistical conditions from single measurements.
 This can be particularly usefull in the case of medical imaging where we often have only one noisy image per patient and where the noise model is well-known.
 
-\cite{gr2r} go beyond the additive gaussian noise model and propose a generic formulation for any posterior distribution $p(Y|X)$ that belongs to the exponential family of distributions.
+\cite{gr2r} go beyond the additive Gaussian noise model and propose a generic formulation for any posterior distribution $p(Y|X)$ that belongs to the exponential family of distributions.
 In particular, we are interested in the case of Poisson noise which is very common in nuclear imaging.
 We introduce $\gamma$ and $\alpha$ which respectively control the noise model scale factor and the balance between the two measurements $Y_1$ and $Y_2$ :
 
