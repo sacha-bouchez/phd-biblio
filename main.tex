@@ -10,10 +10,26 @@
 \usepackage{amsfonts}
 \usepackage{hyperref}
 
+\edef\restoreparindent{\parindent=\the\parindent\relax}
+\usepackage{parskip}
+\restoreparindent
+
 \usepackage{algorithm,algpseudocode}
 
-\usepackage{amsthm}
 \newcommand\independent{\protect\mathpalette{\protect\independenT}{\perp}}
+
+\usepackage{amsthm}
+\newtheoremstyle{slanted}%
+  {12pt}   % Space above
+  {12pt}   % Space below
+  {\itshape} % Body font
+  {}       % Indent
+  {\bfseries} % Head font
+  {.}      % Punctuation after theorem head
+  { }      % Space after theorem head
+  {}       % Head spec
+
+\theoremstyle{slanted}
 \def\independenT#1#2{\mathrel{\rlap{$#1#2$}\mkern2mu{#1#2}}}
 \newtheorem{theorem}{Theorem}[section]
 \newtheorem{definition}{Definition}[section]
