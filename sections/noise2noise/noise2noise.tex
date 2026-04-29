@@ -1,0 +1,437 @@
+\section{\label{sec:noise2noise}Noise2Noise : learn from noisy data}
+
+A seminal work in the denoising field is the \textbf{Noise2Noise} framework \cite{lehtinen_noise2noise_2018}.
+Noise2Noise is a denoising method at the crossroad between self-supervised methods — which learn to denoise only from noisy samples — and supervised methods — which require clean targets to learn the mapping between noisy and clean image.
+The key idea of Noise2Noise is that we learn to denoise images from pairs of noisy images instead of noisy-clean image pairs or single noisy images.
+These pairs of noisy images can be obtained in various ways depending on the application. Each pair must represent the same underlying clean image but with different realizations of the noise process.
+Hence, we use the information contained in the noisy data itself to learn how to denoise it, without ever observing clean images.
+
+Noise2noise can be extended to the case of linear inverse problems. Both reconstruction and denoising can be performed jointly. We will present this extension in the last part of this section. As a consequence, we will use the formalism of
+\eqref{eq:inverse-problem} to present the Noise2Noise framework and its theoretical guarantees.
+
+\subsection{$A = I$ case : pure denoising}
+
+First, let consider the most basic case of pure denoising, i.e. when $A = I$ in \eqref{eq:inverse-problem}.
+In order to avoid confusion, we will not write $Y = AX + B$ but rather $Y = X + B$ in the following.
+
+Let $Y^{(1)}$ and $Y^{(2)}$ be two noisy observations of the same underlying clean image $X$ obtained through the same corruption process $\mathcal{C}$ but with different realizations of the noise.
+Thus, the noisy pairs are generated according to the following noise model :
+
+\begin{equation}
+    Y^{(j)} | X \sim \mathcal{C}(X), \quad j = 1, 2
+    \label{eq:additive_noise}
+\end{equation}
+
+Let $\{(Y_i^{(1)}, Y_i^{(2)})\}_{i=1}^N$ be a finite sequence of independant and statistically distributed random variables.
+We denote as $y_i^{(j)}$ the observed noisy images for $j = 1, 2$ and $i = 1, \dots, N$.
+
+We train a neural network $f_\theta$ with parameters $\theta$ to map the noisy image $y_i^{(1)}$ to the other noisy image $y_i^{(2)}$ both representing a different corruption of the same underlying clean image $x_i$ and vice versa by minimizing the following loss function :
+
+\begin{equation}
+    \mathcal{L}_{\text{N2N}}(\theta) = \frac{1}{2N} \sum_{i=1}^N \left[ \rho(f_\theta(y_i^{(1)}), y_i^{(2)}) + \rho(f_\theta(y_i^{(2)}), y_i^{(1)}) \right]
+    \label{eq:n2n_loss}
+\end{equation}
+with $\rho$ a loss function such as the Mean Squared Error (MSE), the Mean Absolute Error (MAE) or any other appropriate loss.
+
+The supervised counterparts of \eqref{eq:n2n_loss} would be :
+
+\begin{equation}
+    \mathcal{L}_{\text{clean}}(\theta) = \frac{1}{N} \sum_{i=1}^N \rho(f_\theta(y_i), x_i) 
+    \label{eq:supervised_loss}
+\end{equation}
+with $y_i$ being a noisy observation of the clean image $x_i$.
+
+\subsubsection{MSE loss case}
+
+\begin{theorem}
+    \label{th:noise2noise_l2}
+    Minimizing \eqref{eq:n2n_loss} with $\rho(x, y) = \| x - y \|_2^2$ gives the same estimator as minimizing \eqref{eq:supervised_loss} as $N \to \infty$ under the following conditions :
+    \begin{itemize}
+        \item $Y^{(1)}$ and $Y^{(2)}$ are independent given the clean image $X$ (i.e. $Y^{(1)} | X \independent Y^{(2)} | X$).
+        \item Noise is centered, i.e. $\mathbb{E}[Y^{(j)} | X^{(j)} = x] = x$ for $j = 1, 2$.
+    \end{itemize}
+\end{theorem}
+
+\begin{proof}
+    We expand the Noise2Noise empirical risk as follows :
+    \begin{align*}
+        R_{N,1}^{n2n}(\theta) &= \frac{1}{N} \sum_{i=1}^N \left[ \| f_\theta(Y_i^{(1)}) - (X^{(i)} + B^{(2)}) \|_2^2 \right] \\
+        &= \frac{1}{N} \sum_{i=1}^N \left[ \|( f_\theta(Y_i^{(1)}) - X^{(i)}) - B^{(2)} \|_2^2 \right] \\
+        &= R_{N,1}^{clean}(\theta) + \frac{1}{N} \sum_{i=1}^N \left[ \| B^{(2)} \|_2^2 \right] - \frac{2}{N} \sum_{i=1}^N \left[ (f_\theta(Y_i^{(1)}) - X^{(i)})^T B^{(2)} \right]
+    \end{align*}
+    However, $\frac{2}{N} \sum_{i=1}^N \left[ (f_\theta(Y_i^{(1)}) - X^{(i)})^T B^{(2)} \right] \xrightarrow[N \to \infty]{a.s.} 2 \mathbb{E} \left[ (f_\theta(Y^{(1)}) - X)^T B^{(2)} \right]$ by the law of large numbers. This expectation vanishes under the independence and zero-mean assumptions on the noise.
+    Thus, we have :
+    \begin{equation*}
+        R_{N,1}^{n2n}(\theta) = R_{N,1}^{clean}(\theta) + \frac{1}{N} \sum_{i=1}^N \left[ \| B^{(2)} \|_2^2 \right] + o(1)
+    \end{equation*}
+    We show a similar result for the second term of the Noise2Noise empirical risk by swapping $Y^{(1)}$ and $Y^{(2)}$ and we get the following result :
+    \begin{equation*}
+        R_{N}^{n2n}(\theta) = 2 R_{N}^{clean}(\theta) + \frac{1}{N} \sum_{i=1}^N \left[ \| B_i^{(1)} \|_2^2 + \| B_i^{(2)} \|_2^2 \right] + o(1)
+    \end{equation*}
+    where we are left with the standard clean denoising empirical risk with its underlying bias and variance decomposition, and an irreductible noise variance term which has no influence as it is independent of $\theta$.
+\end{proof}
+
+\subsubsection{Poisson negative log-likelihood case}
+\label{sec:noise2noise_poisson}
+
+
+\begin{definition}
+    For two random variables $X: \Omega \to \mathcal{X}$ and $Y: \Omega \to \mathcal{Y}$, we say that $Y \,|\, X \sim \text{Poisson}(X)$ if :
+    \begin{equation*}
+        \forall i = 1 \dots d, \quad \mathbb{P}(Y[i] = k \,|\, X[i] = x[i]) = \frac{(x[i])^k e^{-x[i]}}{k!}, \quad k \in \mathbb{N}
+    \end{equation*}
+\end{definition}
+
+\begin{proposition}
+    Under the assumption $Y \,|\, X \sim \text{Poisson}(X)$, we have :
+    \begin{equation*}
+        \mathbb{E}[Y \,|\, X] = X
+    \end{equation*}
+\end{proposition}
+
+\begin{proof}
+    By definition of the Poisson distribution, we have :
+    \begin{align*}
+        \mathbb{E}[Y[i] \,|\, X[i] = x[i]] &= \sum_{k=0}^{\infty} k \cdot \mathbb{P}(Y[i] = k \,|\, X[i] = x[i]) \\
+        &= \sum_{k=0}^{\infty} k \cdot \frac{(x[i])^k e^{-x[i]}}{k!} \\
+        &= x[i] \sum_{k=1}^{\infty} \frac{(x[i])^{k-1} e^{-x[i]}}{(k-1)!} \\
+        &= x[i] \cdot 1 = x[i]
+    \end{align*}
+    Thus, we have $\mathbb{E}[Y \,|\, X] = X$.
+\end{proof}
+
+Now, we consider the case of Poisson noise (i.e. $Y^{(j)} \,|\, X^{(j)} \sim \text{Poisson}(X^{(j)}), \quad j = 1, 2$).
+Given a clean image $x$ and a noisy observation $y$ corrupted by Poisson noise, the likelihood of observing $y$ given $x$ is given by :
+\begin{equation*}
+    p(y|x) = \prod_{i} \frac{(x[i])^{y[i]} e^{-x[i]}}{y[i]!}
+\end{equation*}
+Taking the negative logarithm of this likelihood gives us the Poisson negative log-likelihood loss as defined in the following definition.
+
+\begin{definition}
+    The Poisson negative log-likelihood loss between two images $y$ and $x$ is defined as follows :
+    \begin{equation*}
+        \mathcal{L}_{Poisson}(y, x) = \sum_{i} \left[ y[i] - x[i] \log(y[i]) + \log(x[i]!) \right]
+    \end{equation*}
+\end{definition}
+
+\begin{theorem}
+    \label{th:noise2noise_poisson}
+    If $Y | X=x \sim \text{Poisson}(x)$, then minimizing \eqref{eq:n2n_loss} with $\rho = \mathcal{L}_{Poisson}$ gives the same estimator as minimizing \eqref{eq:supervised_loss} as $N \to \infty$ under the following conditions :
+    \begin{itemize}
+        \item $Y^{(1)}$ and $Y^{(2)}$ are independent given the clean image $X$ (i.e. $Y^{(1)} | X \independent Y^{(2)} | X$)..
+    \end{itemize}
+\end{theorem}
+
+\begin{proof}
+    The poisson negative log-likelihood between $Y_1$ and $Y_2$ can be expressed as follows :
+    \begin{equation*}
+        \mathcal{L}_{Poisson}(Y_1, Y_2) = Y_1 - Y_2 \log(Y_1) + \log(Y_2!)
+    \end{equation*}
+    We expand the Noise2Noise Poisson empirical risk as follows :
+    \begin{align*}
+        R_{N,1}^{n2n}(\theta) &= \frac{1}{N} \sum_{i=1}^N \left[ \mathcal{L}_{Poisson}(f_\theta(Y_i^{(1)}), Y_i^{(2)}) \right] \\
+        &= \frac{1}{N} \sum_{i=1}^N \left[ f_\theta(Y_i^{(1)}) - Y_i^{(2)} \log(f_\theta(Y_i^{(1)})) + \log(Y_i^{(2)}!) \right]
+    \end{align*}
+    Yet, $\frac{1}{N} \sum_{i=1}^N Y_i^{(2)} \log(f_\theta(Y_i^{(1)})) \xrightarrow[N \to \infty]{a.s.} \mathbb{E} \left[ Y^{(2)} \log(f_\theta(Y^{(1)})) \right]$ due to the law of large numbers. Under the independence assumption on the noise, this expectation can be rewritten as 
+    \begin{align*}
+        \mathbb{E} \left[ Y^{(2)} | X \right] \mathbb{E} \left[ \log(f_\theta(Y^{(1)})) \right] = X \mathbb{E} \left[ \log(f_\theta(Y^{(1)})) \right]
+    \end{align*}
+    Then, the empirical risk satisfies the following almost sure convergence :
+    \begin{align*}
+        R_{N,1}^{n2n}(\theta) \xrightarrow[N \to \infty]{a.s.} \mathbb{E} \left[ f_\theta(Y^{(1)}) - X \log(f_\theta(Y^{(1)})) + \log(Y^{(2)}!) \right]
+    \end{align*}
+    We can do the same for the second term of the loss by swapping $Y^{(1)}$ and $Y^{(2)}$ and we get the following result :
+    \begin{equation*}
+        R_{N}^{n2n}(\theta) \xrightarrow[N \to \infty]{a.s.} 2 \mathbb{E} \left[ f_\theta(Y) - X \log(f_\theta(Y)) + \log(Y!)\right]
+    \end{equation*}
+    where we are left with the standard clean poisson negative-log likelihood risk plus a constant term independent of $\theta$.
+\end{proof}
+
+In summary, having independent realizations is crucial for this framework to work.
+In the case of additive noise trained under the L2 loss, the noise must also be zero-mean.
+Either way, the method is very flexible and can be applied to various noise models. \cite{lehtinen_noise2noise_2018} also mention Bernoulli noise and text removal as possible applications of their method.
+The previous propositions give theoretical guarantees that the estimator produced by the Noise2Noisemethod will be very close to the one produced by the supervised method, with similar variance and bias.
+
+% TODO extend it to the exponential family
+
+
+\begin{figure}
+    \centering
+        \begin{tikzpicture}
+            % Network prediction node
+            \node [draw, circle, fill=blue!40, thick] (pred) {\textbf{$\hat{y}$}};
+            \node [above=0.15cm] at (pred.north) {Network prediction};
+
+            % Clean target node (not directly used, but for reference)
+            \node [shade, inner color=red!40, outer color=white, draw=none] (clean_target_halo) at ([xshift=-0.25cm, yshift=-1.5cm]pred.south west) [circle, minimum size=1.5cm] {};
+            \node [draw, circle, fill=red!40, thick] (clean_target) at (clean_target_halo)  {\textbf{$y$}};
+            \node [below=0.1cm] at (clean_target.south) {Unobserved target};
+
+            % Multiple noisy targets
+            \foreach \i/\angle/\distance in {1/210/2.3, 2/125/1.5, 3/290/1.8, 4/0/2, 5/130/3} {
+                \node[draw, circle, fill=orange!30, thick] (noisy\i) at ($(clean_target) + (\angle:\distance)$) {\textbf{$y_{\i}$}};
+                \draw[->, thick, opacity=0.4] (pred) -- (noisy\i);
+            }
+        \end{tikzpicture}
+    \caption{Illustration of the Noise2Noise framework where a neural network is trained to map a noisy input image to multiple noisy target images representing different realizations of the same underlying clean image.}
+    \label{fig:noise2noise}
+\end{figure}
+
+\subsubsection{Consensus loss}
+
+The two independant noisy observations may be obtained by splitting the data into two
+different subsets, hence the noise in each subset is higher than the noise in the original data.
+This is the case for example in the medical field.
+\cite{wu19} propose a consensus loss to alleviate this issue and improve the results of the aggregated outputs 
+\begin{equation}
+    \hat{y_i} = \frac{1}{2}(f_\theta(y_i^{(1)}) + f_\theta(y_i^{(2)}))
+\end{equation}
+
+In this section, we assume that $\rho$ is the MSE loss.
+We start by stating that the supervised loss of the aggregated output can be written as follows :
+
+\begin{align*}
+    \mathcal{L}_{\text{clean}}(\theta) &= \frac{1}{N} \sum_{i=1}^N \| \frac{1}{2}(f_\theta(y_i^{(1)}) + f_\theta(y_i^{(2)})) -  x_i \|_2^2 \\
+    &= \frac{1}{N} \sum_{i=1}^N \frac{1}{2} \| f_{\theta}(y_i^{(1)}) - x_i \|_2^2 + \frac{1}{2} \| f_{\theta}(y_i^{(2)}) - x_i \|_2^2 - \frac{1}{4} \| f_{\theta}(y_i^{(1)}) - f_{\theta}(y_i^{(2)}) \|_2^2
+\end{align*}
+
+Theorem \ref{th:noise2noise_l2} shows that the the unobserved clean image $x_i$ can be replaced by one of its noisy version $y_i^{(j)}$ in the previous expression without changing the optimal solution of the problem.
+Thus, we can rewrite the supervised loss of the aggregated output as follows :
+
+\begin{equation}
+    \mathcal{L}_{\text{consensus}}(\theta) = \frac{1}{N} \sum_{i=1}^N \frac{1}{2} \| f_{\theta}(y_i^{(1)}) - y_i^{(2)} \|_2^2 + \frac{1}{2} \| f_{\theta}(y_i^{(2)}) - y_i^{(1)} \|_2^2 - \frac{1}{4} \| f_{\theta}(y_i^{(1)}) - f_{\theta}(y_i^{(2)}) \|_2^2
+    \label{eq:consensus_loss}
+\end{equation}
+
+\subsubsection{Other Noise2Noise-based frameworks}
+
+
+\paragraph{Noise2Noise}
+
+In the context of a known noise model, the Noise2Noise principle can be extended to approaches like \textbf{Noisier2Noise} \cite{moran_noisier2noise_2019} where we can add extra noise to a single noisy image to create a pair of noisy images with a lower noise level in the target image.
+
+\paragraph{Noise2Score}
+
+\cite{kim_noise2score_nodate} propose a 2-step framework called \textbf{Noise2Score}. First the score function is being estimated using a DAE trained under framework closed to Noisier2Noise where noise is embedded into the images according to the noise model and then the network learn the mapping to retrieve less noisy images.
+Then, the estimated denoised images are simply computed using the appropriate Tweedie's formula variant.
+This method is very promissing at it is at the crossroad between bayesian methods with strong mathematical background and self-supervised learning.
+
+
+\paragraph{Noise2NoiseFlow}
+
+\cite{maleky_noise2noiseflow_2022} propose a framework at the crossroad between density estimation and the Noise2Noise framework. Density estimation is performed using Noise Flow \cite{abdelhamed_noise_2019}, a normalizing flow model designed to learn complex noise distributions from data.
+Notice that the density is closely related to the score.
+Whereas classical score matching methods require model trained in a supervised manner with clean data or denoising auto-encoders trained in an unsupervised manner to estimate the score function, they propose to directly learn the score function from noisy data only using the Noise2Noise principle.
+Both the denoising model and the normalizing flow are trained jointly using pairs of noisy images under the following loss function :
+
+\begin{equation}
+    \mathcal{L}(\theta, \phi) =  \underset{\substack{y_1, y_2 \sim p_{noisy}}}{\mathbb{E}} \left[ - \log p_{N_\phi}(y_1 | f_\theta(y_2)) - \log p_{N_\phi}(y_2 | f_\theta(y_1)) \right] + \lambda \mathcal{L}_{n2n}(\theta)
+\end{equation}
+
+with $p_{N_\phi}$ being the noise distribution modeled by the normalizing flow with parameters $\phi$, $f_\theta$ the denoising model with parameters $\theta$ and $\mathcal{L}_{n2n}(\theta)$ the standard Noise2Noise loss. The authors of Noise2NoiseFlow show that this additional term gives more stability to the training process and leads to better denoising results.
+
+Note that this framework is useless if we already know the natural noise distribution in the data as we could directly use it to denoise images using bayesian methods.
+
+
+
+\subsection{Bootstrapping noisy measurements}
+
+In this paragraph, we discuss how to generate two independant measurements to apply Noise2Noise on from a single measurement.
+
+\subsubsection{Statistical bootstrapping}
+
+In the context of additive gaussian noise, \textbf{Recorrupted2Recorrupted} \cite{Pang2021} aims to provide a way to simulate noisy image pairs satisfying statistical conditions from single measurements.
+This can be particularly usefull in the case of medical imaging where we often have only one noisy image per patient and where the noise model is well-known.
+We propose an intuitive alternative to their method with Poisson noise.
+
+\begin{definition}{Infinitely divisible distribution}
+    Let $Y$ be a random variable. $Y$ is said to be $n$-divisible if there exists a sequence of $n$ i.i.d. random variables $\{Y_i\}_{i=1}^n$ such that $Y \stackrel{d}{=} \sum_{i=1}^n Y_i$. If $Y$ is $n$-divisible for all $n \in \mathbb{N}$, then $Y$ is said to be infinitely divisible.
+\end{definition}
+
+If the noise model is well-known and satisfies the infinite divisibility property, we can use this property to generate pairs of noisy images from a single noisy image by splitting the noise into two independent parts.
+
+\begin{proposition}
+    The Poisson distribution is infinitely divisible ; in particular, it is $2$-divisible. Thus, if $Y \sim \text{Poisson}(\lambda)$, then there exists two i.i.d. random variables $Y_1$ and $Y_2$ such that $Y = Y_1 + Y_2$ and $Y_1, Y_2 \sim \text{Poisson}(\lambda/2)$.
+    \label{prop:poisson_divisibility}
+\end{proposition}
+
+\begin{proof}
+    This proof will focus on the case of $2$-divisibility, but it can be easily extended to the general case of $n$-divisibility.
+    Let $Y$ be a random variable following a Poisson distribution with parameter $\lambda$, and let $Y_1 | Y=y \sim \text{Binomial}(y, 1/2)$ be a random variable following a binomial distribution with parameters $y$ and $1/2$ conditionally on $Y=y$. We define $Y_2 = Y - Y_1$. We have the following result for the distribution of $Y_1$ :
+    \begin{align*}
+        \mathbb{P}(Y_1 = k) &= \sum_{y=k}^{\infty} \mathbb{P}(Y_1 = k | Y = y) \mathbb{P}(Y = y) \\
+        &= \sum_{y=k}^{\infty} \binom{y}{k} \left( \frac{1}{2} \right)^y \frac{\lambda^y e^{-\lambda}}{y!} \\
+        &= \sum_{y=k}^{\infty} \frac{y!}{k!(y-k)!} \left( \frac{1}{2} \right)^y \frac{\lambda^y e^{-\lambda}}{y!} \\
+        &= \frac{1}{k!} \left( \frac{\lambda}{2} \right)^k e^{-\lambda/2} \sum_{y=k}^{\infty} \frac{(\lambda/2)^{y-k} e^{-\lambda/2}}{(y-k)!} \\
+        &= \frac{1}{k!} \left( \frac{\lambda}{2} \right)^k e^{-\lambda/2}
+    \end{align*}
+    Thus, $Y_1$ follows a Poisson distribution with parameter $\lambda/2$. By symmetry, $Y_2$ also follows a Poisson distribution with parameter $\lambda/2$. Moreover, we have $Y = Y_1 + Y_2$ by definition.
+
+    Finally, we show that $Y_1$ and $Y_2$ are independent. We have :
+    \begin{align*}
+        \mathbb{P}(Y_1 = k, Y_2 = l) &= \mathbb{P}(Y_1 = k, Y_2 = l | Y = k + l) \mathbb{P}(Y = k + l) \\
+        &= \binom{k+l}{k} \left( \frac{1}{2} \right)^{k+l} \frac{\lambda^{k+l} e^{-\lambda}}{(k+l)!} \\
+        &= \frac{1}{k!} \left( \frac{\lambda}{2} \right)^k e^{-\lambda/2} \cdot \frac{1}{l!} \left( \frac{\lambda}{2} \right)^l e^{-\lambda/2} \\
+        &= \mathbb{P}(Y_1 = k) \mathbb{P}(Y_2 = l)
+    \end{align*}
+\end{proof}
+
+The previous proposition shows that it is possible to perform binomial thinnning on Poisson data in order to generate independant pairs of noisy images.
+However, subsampled images expectation is not the same as the original image expectation, as well as noise variance, which means that the signal to noise ratio is higher in the subsampled images than in the original image.
+
+\cite{gr2r} go beyond the additive Gaussian noise model or Poisson noise model and propose a generic formulation for any posterior distribution $p(Y|X)$ that belongs to the exponential family of distributions.
+Their implementation in the case of Poisson noise is shown in the following proposition.
+We introduce $\gamma$ and $\alpha$ which respectively control the noise model scale factor and the balance between the two measurements $Y_1$ and $Y_2$ :
+
+\begin{equation}
+    \begin{cases}
+        Y = \gamma Z \\
+        Z | X =x \sim \text{Poisson}(\frac{x}{\gamma}) \\
+        W | Z = z \sim \text{Binomial}(z, \alpha) \\
+        Y_1 = \frac{Y - \gamma W}{1 - \alpha} \\
+        Y_2 = \frac{1}{\alpha} Y - \frac{1 - \alpha}{\alpha} Y_1
+    \end{cases}
+    \label{eq:gr2r}
+\end{equation}
+
+\begin{proposition}
+    The measurements admits decomposition $Y = (1 - \alpha) Y_1 + \alpha Y_2$ and satisfy the following properties :
+    \begin{itemize}
+        \item $Y_1$ and $Y_2$ are independent given the clean image $X$.
+        \item $\mathbb{E}[Y_1 | X=x] = \mathbb{E}[Y_2 | X=x] = \mathbb{E}[Y | X=x] = x$.
+        \item $\mathbb{V}[Y_1 | X=x] = \frac{1}{1 - \alpha} \mathbb{V}[Y | X=x] = \frac{1}{1 - \alpha} x$.
+        \item $\mathbb{V}[Y_2 | X=x] = \frac{1}{\alpha} \mathbb{V}[Y | X=x] = \frac{1}{\alpha} x$.
+    \end{itemize}
+\end{proposition}
+
+\cite{gr2r} propose a generic proof for the previous proposition when the noise distribution is any member of the exponential family of distributions, which includes the Poisson distribution as a special case.
+
+\begin{remark}
+    The definition of $Y_1$ and $Y_2$ in \eqref{eq:gr2r} when $\alpha = 0.5$ and $\gamma = 2$ match the one from proposition \ref{prop:poisson_divisibility}.
+\end{remark}
+
+\subsubsection{Data-based bootstrapping}
+
+
+\textbf{Noise2Void} \cite{krull_noise2void_2019} and \textbf{Noise2Self} \cite{batson_noise2self_nodate} frameworks further extend the idea of training denoising models without clean targets by using only single noisy images.
+\cite{batson_noise2self_nodate} introduce the concept of \textit{$\mathcal{J}$-invariant} functions, which are functions that do not depend on certain subsets of their input.
+We train a denoising model to be $\mathcal{J}$-invariant by masking certain pixels of the input image and predicting their values based on the surrounding pixels.
+The work of \cite{krull_noise2void_2019} implements this idea by randomly masking pixels in the input image during training and using the unmasked pixels to predict the masked ones.
+This is called the \textit{blind-spot} strategy and ensures that the model does not learn to simply copy the noisy input to the output, thus learning the identity.
+
+In some applications, it is also possible to take advantage of the acquisition process to generate multiple noisy measurements of the same underlying clean image.
+If a signal $y$ is drawn from \eqref{eq:inverse-problem}, it can be splitted into two non-overlapping subsets of measurements $y_1$ and $y_2$ such that
+
+\begin{equation}
+    \begin{cases}
+        y_1 = A_1 x + b_1 \\
+        y_2 = A_2 x + b_2
+    \end{cases}
+\end{equation}
+with $A_1$ and $A_2$ two linear operators inheriting from $A$ and defined accordingly to $y_1$ and $y_2$ and $b_1$ and $b_2$ two noise vectors.
+
+This idea was exploited in the context of Computed Tomography where odd and even projections are separated to get $K$ sinogram subsets \cite{hendriksen_noise2inverse_2020}.
+Each resulting sinogram subset is an even more discretized version of the original sinogram, thus even more ill-posed and noisy than the original problem.
+They study two different training strategies.
+The first one uses the average of the first $K-1$ sinograms as input and the remaining one as target. This strategy is close to the Noise2Self principle.
+The second one is the reversed of the first and is closer to the Noisier2Noise strategy as the input will be noisier than the target.
+
+
+\subsection{Generalization of Noise2Noise to linear inverse problems}
+
+In this section, we get back to the general framework where $A$ is unspecified.
+Let again $\{(Y_i^{(1)}, Y_i^{(2)})\}_{i=1}^N$ be a finite sequence of independant and statistically distributed random variables and $y_i^{(j)} = A_i^{(j)}x_i + b_i^{(j)}$ the observed degraded images.
+We also rewrite \ref{eq:inverse-problem} as :
+\begin{equation}
+    \begin{cases}
+        Y^{(j)} | X=x \sim \mathcal{C}(A^{(j)}x), \quad j = 1, 2 \\
+        Y^{(j)} = A^{(j)} X + B^{(j)}, \quad j = 1, 2
+    \end{cases}
+\end{equation}
+with $A^{(j)} \in \mathbb{R}^{d \times m}$ two linear operators inheriting from $A$ and defined accordingly to $Y^{(1)}$ and $Y^{(2)}$.
+
+
+In the context of non-blind estimation, i.e. when $A^{(j)}$ is known, we can optimize a neural network $f_{\theta}$ under the following objective function \cite{xia_training_nodate} :
+\begin{equation}
+    \mathcal{L}_{swap}(\theta) = \frac{1}{N} \sum_{i=1}^N \left[ \rho(A_i^{(2)} f_{\theta}(y_i^{(1)}) - y_i^{(2)}) + \rho(A_i^{(1)} f_{\theta}(y_i^{(2)}) - y_i^{(1)}) \right]
+    \label{eq:xia_swap_loss}
+\end{equation}
+
+
+\begin{theorem}
+    Minimizing \ref{eq:n2n_loss} with $\rho(x, y) = \| x - y \|_2^2$ gives the same estimator as minimizing the homologous supervised loss as $N \to \infty$ under Noise2Noise statistical conditions.
+\end{theorem}
+
+\paragraph{MSE loss}
+
+\begin{proof}
+    Proof in theorem \ref{th:noise2noise_l2} is still valid as long as we replace $f_{\theta}(Y^{(j)})$ by $Af_{\theta}(Y^{(j)})$. We thus have :
+    \begin{align*}
+        R_{N}^{n2n}(\theta) &= \frac{1}{N} \sum_{i=1}^N \left[ \| A_i^{(2)} f_{\theta}(Y_i^{(1)}) - Y_i^{(2)} \|_2^2 + \| A_i^{(1)} f_{\theta}(Y_i^{(2)}) - Y_i^{(1)} \|_2^2 \right] \\
+        &= 2 R_{N}^{clean}(\theta) + \frac{1}{N} \sum_{i=1}^N \left[ \| B_i^{(1)} \|_2^2 + \| B_i^{(2)} \|_2^2 \right] + o(1)
+    \end{align*}
+\end{proof}
+
+\paragraph{Poisson linear inverse problems}
+
+With the conventions of section \ref{sec:noise2noise_poisson}, we now consider the case of linear inverse problems corrupted by Poisson noise :
+
+\begin{equation}
+    Y^{(j)} \sim Poisson(A^{(j)} X), \quad j = 1, 2
+\end{equation}
+
+\begin{theorem}
+    If $Y | X=x \sim \text{Poisson}(Ax)$, then minimizing \ref{eq:n2n_loss} with $\rho = \mathcal{L}_{Poisson}$ gives the same estimator as minimizing the homologous supervised loss as $N \to \infty$ under Noise2Noise statistical conditions.
+\end{theorem}
+
+\begin{proof}
+    Proof in theorem \ref{th:noise2noise_poisson} is still valid as long as we replace $f_{\theta}(Y^{(j)})$ by $A f_{\theta}(Y^{(j)})$. If we define the empirical risk as :
+    \begin{equation*}
+        R_{N}^{n2n}(\theta) = \frac{1}{N} \sum_{i=1}^N \left[ \mathcal{L}_{Poisson}(A_i^{(2)} f_{\theta}(Y_i^{(1)}), Y_i^{(2)}) + \mathcal{L}_{Poisson}(A_i^{(1)} f_{\theta}(Y_i^{(2)}), Y_i^{(1)}) \right]
+    \end{equation*}
+    then we have :
+    \begin{equation*}
+        R_{N}^{n2n}(\theta) \xrightarrow[N \to \infty]{a.s.} 2 \mathbb{E} \left[ f_\theta(Y) - A X \log(f_\theta(Y)) + \log(Y!)\right]
+    \end{equation*}
+\end{proof}
+
+\subsubsection{Splitting strategies}
+
+\paragraph{Data splitting}
+
+eg tachella, Noise2Inverse
+
+\paragraph{Statistical splitting}
+
+eg R2R, GR2R
+
+\subsubsection{Single-operator framework}
+
+There exists a special case of inverse problems where $A^{(1)} = A^{(2)}$ for each training pair.
+In this case, the loss function can be simplified as follows :
+
+\begin{equation}
+    \mathcal{L}_{\text{swap}}(\theta) = \frac{1}{N} \sum_{i=1}^N \left[ \rho(A_i f_{\theta}(y_i^{(1)}) - y_i^{(2)}) + \rho(A_i f_{\theta}(y_i^{(2)}) - y_i^{(1)}) \right]
+\end{equation}
+
+\subsubsection{Data consistency enforcement}
+
+Eventhough the loss function \ref{eq:xia_swap_loss} is sufficient to guarantee that the optimal solution of the problem is the same as the one of the supervised problem, it does not enforce data-consistency during training, which can lead to suboptimal results.
+Indeed, this term is biased toward smoothness as a denoising objective. Thus it can be usefull to add an extra term to the loss function to enforce data-consistency during training \cite{xia_training_nodate} :
+
+\begin{equation}
+    \mathcal{L}_{\text{self}} = \frac{1}{N} \sum_{i=1}^N \left[ \rho(A_i^{(1)} f_{\theta}(y_i^{(1)}) - y_i^{(1)}) + \rho(A_i^{(2)} f_{\theta}(y_i^{(2)}) - y_i^{(2)}) \right]
+\end{equation}
+
+In the case of inifinite divisibility-based frameworks where $y = y_1 + y_2$ and $y_1$ and $y_2$ are derived from the same probability law, we can simply use the following data-consistency term :
+
+\begin{equation}
+    \mathcal{L}_{\text{self}} = \frac{1}{N} \sum_{i=1}^N \rho\left( \frac{A_i f_{\theta}(y_i^{(1)}) + A_i f_{\theta}(y_i^{(2)})}{2} - y\right)
+\end{equation}
+where we want the resulting average to match the original noisy image $y$.
+
+Eitherway, the final loss function is then written as :
+\begin{equation}
+    \mathcal{L}_{\text{total}} = \mathcal{L}_{\text{swap}} + \lambda \mathcal{L}_{\text{self}}
+\end{equation}
+with $\lambda$ a hyperparameter to tune the weight of the data-consistency term.

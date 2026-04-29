@@ -1,10 +1,11 @@
 \section{Linear inverse problems}
 
+\subsection{Introduction to linear inverse problems}
+
 The main focus of this section is to present mathematical inverse problems, which are problems where we aim to recover an underlying signal from indirect and noisy measurements. These problems are common in various fields such as image reconstruction, signal processing, and machine learning.
 We limit ourselves to linear inverse problems in finite dimensions. This allows us to derive theoretical results and develop efficient algorithms for solving these problems.
 
-
-Let $(\Omega, \mathcal{F}, \mathbb{P})$ be a probability space and $X: \Omega \to \mathbb{R}^n$ a random variable representing the true signal. We assume that we have access to measurements $Y: \Omega \to \mathbb{R}^d$ that are related to the true signal through a linear operator $A: \mathbb{R}^n \to \mathbb{R}^d$ and corrupted by a noise process $\mathcal{C}$. The measurement model can be written as:
+Let $(\Omega, \mathcal{F}, \mathbb{P})$ be a probability space and $X: \Omega \to \mathcal{X}$ a random variable representing the true signal. We assume that we have access to measurements $Y: \Omega \to \mathcal{Y}$ that are related to the true signal through a linear operator $A: \mathcal{X} \to \mathcal{Y}$ and corrupted by a noise process $\mathcal{C}$. The measurement model can be written as:
 \begin{equation}
     Y | X=x \sim \mathcal{C}(Ax)
     \label{eq:inverse-problem}
@@ -15,8 +16,8 @@ In most setups, we work in high dimensions and the forward operator $A$ is not d
 \begin{definition}
     $A$ is said to be ill-posed if one of the following properties is not satisfied :
 \begin{enumerate}
-    \item $A$ is injective, i.e. $\forall x_1, x_2 \in \mathbb{R}^n, Ax_1 = Ax_2 \implies x_1 = x_2$.
-    \item $A$ is surjective, i.e. $\forall y \in \mathbb{R}^d, \exists x \in \mathbb{R}^n$ such as $y = Ax$.
+    \item $A$ is injective, i.e. $\forall x_1, x_2 \in \mathcal{X}, Ax_1 = Ax_2 \implies x_1 = x_2$.
+    \item $A$ is surjective, i.e. $\forall y \in \mathcal{Y}, \exists x \in \mathcal{X}$ such as $y = Ax$.
     \item $A^{-1}$ is continuous, i.e. $\forall \epsilon > 0, \exists \delta > 0$ such as $\| y_1 - y_2 \| < \delta \implies \| A^{-1}y_1 - A^{-1}y_2 \| < \epsilon$.
 \end{enumerate}
 \end{definition}
@@ -27,76 +28,174 @@ In most setups, we work in high dimensions and the forward operator $A$ is not d
 
 If $A$ is ill-posed, then it is obviously not a bijection and its null-space is not reduced to $\{0\}$.
 This means that there exist many solutions to the inverse problem for a given measurement, eventhough we're looking for a unique solution.
-In order to solve this issue, one may consider regularizing the problem by adding prior knowledge on the solution. The goal of this prior is to eliminate the spurious solutions and retrieve a signal as close as possible to the true signal.
 
 
+\begin{definition}{Minimal-norm solution}
+    \begin{enumerate}
+    \item $x \in \mathcal{X}$ is a least-squares solution if 
+    \begin{equation*}
+        \| Ax - y \| = \inf_{z \in \mathcal{X}} \| Az - y \|
+    \end{equation*}
+    \item $x \in \mathcal{X}$ is a minimal-norm solution if it is a least-squares solution and $\| x \| = \inf_{z \in \mathcal{X}, Az = y} \| z \|$.
+    \end{enumerate}
+\end{definition}
 
-\subsection{Generalization of Noise2Noise to linear inverse problems}
+% \begin{definition}{Convergence of solution sequence}
+%     Let $(y_\delta)_{\delta > 0}$ be a sequence of measurements such that $\| y_\delta - y \| \leq \delta$.
+%     This sequence is said to be convergent with regard to an inverse operator $A^\dagger$ if the sequence of minimal-norm solutions $(x_\delta)_{\delta > 0}$ defined by $x_\delta = A^\dagger y_\delta$ converges to the minimal-norm solution $x^\dagger$ of $y$, i.e. $\lim_{\delta \to 0} \| x_\delta - x^\dagger \| = 0$.
 
-\cite{xia_training_nodate} extend the Noise2Noise framework (see section \ref{sec:noise2noise}) to linear inverse problems such as image restoration.
-Formalism from section \ref{sec:noise2noise} is still valid and we will use the same notations in the following.
-Let again $\{(Y_i^{(1)}, Y_i^{(2)})\}_{i=1}^N$ be a finite sequence of independant and statistically distributed random variables and $y_i^{(j)} = Y_i^{(j)}(\omega_i) = A_i^{(j)}x_i + b_i^{(j)}$ the observed degraded images for $\omega \in \Omega$, $j = 1, 2$, $i = 1, \dots, N$.
-We also rewrite \ref{eq:inverse-problem} as :
-\begin{equation}
-    \begin{cases}
-        Y^{(j)} | X=x \sim \mathcal{C}(A^{(j)}x), \quad j = 1, 2 \\
-        Y^{(j)} = A^{(j)} X + B^{(j)}, \quad j = 1, 2
-    \end{cases}
-\end{equation}
-with $A^{(j)} \in \mathbb{R}^{d \times m}$ two linear operators inheriting from $A$ and defined accordingly to $Y^{(1)}$ and $Y^{(2)}$.
+% \end{definition}
 
-In the context of non-blind estimation, i.e. when $A^{(j)}$ is known, we can optimize a neural network $f_{\theta}$ under the following objective function :
-\begin{equation}
-    \mathcal{L}_{swap}(\theta) = \frac{1}{N} \sum_{i=1}^N \left[ \rho(A_i^{(2)} f_{\theta}(y_i^{(1)}) - y_i^{(2)}) + \rho(A_i^{(1)} f_{\theta}(y_i^{(2)}) - y_i^{(1)}) \right]
-    \label{eq:xia_swap_loss}
-\end{equation}
 
-The authors add a second term to the loss function to enforce data consistency with respect to the measurements $y$.
+\begin{proposition}
+    If $A \in \mathcal{L}(\mathcal{X}, \mathcal{Y})$ is a bounded operator and if a least square solution exists, then the minimal-norm solution is unique and is given by $ x ^\dagger = A^\dagger y$ where $A^\dagger$ is the Moore-Penrose pseudo-inverse of $A$. \cite{sherry2025part}
+\end{proposition}
+
+\subsection{Regularisation of inverse problems}
+
+If the range of $A$ is not closed, then Moore-Penrose pseudo-inverse may not be well-posed.
+Thus, given noisy data $y_\delta$ such that $\| y_\delta - y \| \leq \delta$, the least-squares solution $A^\dagger y_\delta$ may not converge to the minimal-norm solution $x^\dagger$ as $\delta \to 0$.
+This is the reason why we need to replace $A^\dagger$ with a family of well-posed and bounded operators $(R_\alpha)_{\alpha > 0}$, called regularisation operators, that approximate $A^\dagger$ as $\alpha \to 0$, hence the following definition.
+
+\begin{definition}{Regularisation}
+    A family of continuous operators $(R_\alpha)_{\alpha > 0}$ is called a regularisation of $A^\dagger$ if $\lim_{\alpha \to 0} R_\alpha y = A^\dagger y$ for all $y \in \mathcal{Y}$.
+\end{definition}
+
+$\alpha$ is called the regularisation parameter. Setting it to a small value allows us to get a good approximation of the minimal-norm solution, but it also makes the regularisation operator more sensitive to noise. On the other hand, setting $\alpha$ to a large value makes the regularisation operator more robust to noise, but it also leads to a worse approximation of the minimal-norm solution. Therefore, choosing an appropriate value for $\alpha$ is crucial for obtaining good reconstruction results.
+This can be seen thanks to the following observation :
+\begin{equation*}
+    \begin{aligned}
+        \| R_\alpha y_\delta - x^\dagger \| &\leq \| R_\alpha y_\delta - R_\alpha y \| + \| R_\alpha y - A^\dagger y \| \\
+        & \leq \delta \| R_\alpha \| + \| R_\alpha y - A^\dagger y \|
+    \end{aligned}
+\end{equation*}
+where the first term is some noise amplification term and the second term is some approximation error term. The first term is increasing with $\alpha$ while the second term is decreasing with $\alpha$, which means that there is a trade-off between noise amplification and approximation error when choosing $\alpha$.
+This decomposition also indicates that the regularisation parameter $\alpha$ should be chosen according to the noise level $\delta$ in order to achieve a good reconstruction performance.
+
+\paragraph{Parameter choice rule}
+
+\begin{definition}{Parameter choice rule}
+    A parameter choice rule is a function $\alpha: \mathbb{R}^+ \times \mathcal{Y} \to \mathbb{R}^+ \mapsto \alpha(\delta, y_\delta)$.
+    There are three parameter choice rule families :
+    \begin{itemize}
+        \item A priori parameter choice rule : $\alpha$ depends only on $\delta$.
+        \item A posteriori parameter choice rule : $\alpha$ depends only on $y_\delta$.
+        \item Heuristic parameter choice rule : $\alpha$ depends on both $\delta$ and $y_\delta$.
+    \end{itemize}
+\end{definition}
+
+
+In this case, we can still define the minimal-norm solution as the limit of the least-squares solutions for a sequence of measurements that converges to $y$ :
 
 \begin{equation*}
-    \mathcal{L}_{self} = \frac{1}{N} \sum_{i=1}^N \left[ \rho(A_i^{(1)} f_{\theta}(y_i^{(1)}) - y_i^{(1)}) + \rho(A_i^{(2)} f_{\theta}(y_i^{(2)}) - y_i^{(2)}) \right]
+    x^\dagger = \lim_{\delta \to 0} A^\dagger y_\delta
 \end{equation*}
-The final loss function is then written as :
-\begin{equation}
-    \mathcal{L}_{total} = \mathcal{L}_{swap} + \lambda \mathcal{L}_{self}
-\end{equation}
-with $\lambda$ a hyperparameter to tune the weight of the data-consistency term.
 
-\begin{remark}
-    Note that choosing $I = A_i^{(1)} = A_i^{(2)} \, \forall i$ is equivalent to the regular Noise2Noise framework.
-\end{remark}
+\subsection{Spectral regularisation}
 
-\begin{theorem}
-    Minimizing \ref{eq:n2n_loss} with $\rho(x, y) = \| x - y \|_2^2$ gives the same estimator as minimizing the homologous supervised loss as $N \to \infty$ under Noise2Noise statistical conditions.
+\subsubsection{Operator compactness}
+
+\begin{definition}
+    An operator $A \in \mathcal{L}(\mathcal{X}, \mathcal{Y})$ is said to be compact if for avery subset $B$ of $\mathcal{X}$ that is bounded, the image closure $\overline{A(B)}$ is compact in $\mathcal{Y}$.
+\end{definition}
+
+\begin{theorem}{Singular value decomposition}
+    Let $A \in \mathcal{L}(\mathcal{X}, \mathcal{Y})$ be a compact operator. Then there exist :
+    
+    \begin{itemize}
+        \item a sequence of positive real numbers $(\sigma_n)_{n \in \mathbb{N}}$ called singular values of $A$ such that $\sigma_n \to 0$ as $n \to \infty$ and $\sigma_1 \geq \sigma_2 \geq \cdots > 0$.
+        \item an orthonormal basis $(x_i)$ of $\text{ker}(A^\perp)$.
+        \item an orthonormal basis $(y_i)$ of $\overline{\text{ran}(A)}$
+    \end{itemize}
+        such that :
+    \begin{equation*}
+        A x_i = \sigma_i y_i, \quad A^* y_i = \sigma_i x_i
+    \end{equation*}
+    with $A^*$ being the adjoint of $A$, and we have the following representation of $A$ and $A^*$ :
+    \begin{equation*}
+        \begin{cases}
+            \displaystyle A x = \sum_{n=1}^\infty \sigma_n \langle x, x_n \rangle y_n \\
+            \displaystyle A^* y = \sum_{n=1}^\infty \sigma_n \langle y, y_n \rangle x_n
+        \end{cases}
+    \end{equation*}
 \end{theorem}
 
-\begin{proof}
-    Proof in theorem \ref{th:noise2noise_l2} is still valid as long as we replace $f_{\theta}(Y^{(j)})$ by $Af_{\theta}(Y^{(j)})$. We thus have :
-    \begin{align*}
-        R_{N}^{n2n}(\theta) &= \frac{1}{N} \sum_{i=1}^N \left[ \| A_i^{(2)} f_{\theta}(Y_i^{(1)}) - Y_i^{(2)} \|_2^2 + \| A_i^{(1)} f_{\theta}(Y_i^{(2)}) - Y_i^{(1)} \|_2^2 \right] \\
-        &= 2 R_{N}^{clean}(\theta) + \frac{1}{N} \sum_{i=1}^N \left[ \| B_i^{(1)} \|_2^2 + \| B_i^{(2)} \|_2^2 \right] + o(1)
-    \end{align*}
-\end{proof}
-
-\subsubsection{Poisson linear inverse problems}
-
-With the conventions of section \ref{sec:noise2noise_poisson}, we now consider the case of linear inverse problems corrupted by Poisson noise :
-
-\begin{equation}
-    Y^{(j)} \sim Poisson(A^{(j)} X), \quad j = 1, 2
-\end{equation}
-
 \begin{theorem}
-    If $Y | X=x \sim \text{Poisson}(Ax)$, then minimizing \ref{eq:n2n_loss} with $\rho = \mathcal{L}_{Poisson}$ gives the same estimator as minimizing the homologous supervised loss as $N \to \infty$ under Noise2Noise statistical conditions.
+    Let $A \in \mathcal{L}(\mathcal{X}, \mathcal{Y})$ be a compact operator with singular value decomposition $(\sigma_n, x_n, y_n)_{n \in \mathbb{N}}$ given by the previous theorem. 
+    Then the Moore-Penrose pseudo-inverse of $A$ is given by :
+    \begin{equation*}
+        A^\dagger y = \sum_{n=1}^\infty \frac{1}{\sigma_n} \langle y, y_n \rangle x_n
+    \end{equation*}
 \end{theorem}
 
-\begin{proof}
-    Proof in theorem \ref{th:noise2noise_poisson} is still valid as long as we replace $f_{\theta}(Y^{(j)})$ by $A f_{\theta}(Y^{(j)})$. If we define the empirical risk as :
-    \begin{equation*}
-        R_{N}^{n2n}(\theta) = \frac{1}{N} \sum_{i=1}^N \left[ \mathcal{L}_{Poisson}(A_i^{(2)} f_{\theta}(Y_i^{(1)}), Y_i^{(2)}) + \mathcal{L}_{Poisson}(A_i^{(1)} f_{\theta}(Y_i^{(2)}), Y_i^{(1)}) \right]
-    \end{equation*}
-    then we have :
-    \begin{equation*}
-        R_{N}^{n2n}(\theta) \xrightarrow[N \to \infty]{a.s.} 2 \mathbb{E} \left[ f_\theta(Y) - A X \log(f_\theta(Y)) + \log(Y!)\right]
-    \end{equation*}
-\end{proof}
+Most linear inverse problems are modelled by compact operators, which means that the singular values of $A$ tend to zero as their index goes to infinity. This is the reason why the Moore-Penrose pseudo-inverse is not well-posed, since it involves dividing by the singular values of $A$ which can be arbitrarily small and very close to zero.
+
+\subsubsection{Truncated singular value decomposition}
+
+A good choice of a regularizer could be the singular value decomposition of $A$ :
+
+\begin{equation*}
+    R_\alpha y = \sum_{n=1}^\infty g_\alpha(\sigma_n) \langle y, y_n \rangle x_n
+\end{equation*}
+with $g_\alpha$ being a family of functions such that $\lim_{\alpha \to 0} g_\alpha(\sigma) = \frac{1}{\sigma}$ for all $\sigma > 0$ and $g_\alpha(0) = 0$ for all $\alpha > 0$.
+
+Then one can choose to set $g_\alpha$ as the truncated singular value decomposition, which is defined as follows :
+\begin{equation*}
+    g_\alpha(\sigma) = \begin{cases}
+        \frac{1}{\sigma} & \text{if } \sigma \geq \alpha \\
+        0 & \text{if } \sigma < \alpha
+    \end{cases}
+\end{equation*}
+
+The regularizer can then be written as :
+\begin{equation*}
+    R_\alpha y = \sum_{\sigma_n \geq \alpha} \frac{1}{\sigma_n} \langle y, y_n \rangle x_n
+\end{equation*}
+which is now a finite sum and thus well-posed. However, this regularizer is not very robust to noise since it still involves dividing by the singular values of $A$ which can be close to zero.
+
+\subsubsection{Tikhonov regularisation}
+
+The Tikhonov regularisation also uses the singular value decomposition of $A$ but with a different choice of the function $g_\alpha$ :
+\begin{equation*}
+    g_\alpha(\sigma) = \frac{\sigma}{\sigma^2 + \alpha}
+\end{equation*}
+
+The regularizer can then be written as :
+\begin{equation*}
+    R_\alpha y = \sum_{n=1}^\infty \frac{\sigma_n}{\sigma_n^2 + \alpha} \langle y, y_n \rangle x_n
+\end{equation*}
+which is now a well-posed regularizer that is more robust to noise than the truncated singular value decomposition since it does not involve dividing by the singular values of $A$ but rather dividing by a shifted version of the singular values which are always greater than or equal to $\alpha$.
+
+
+\subsection{Variationnal regularisation}
+
+
+
+
+
+
+
+
+\subsection{Model-based methods}
+
+The most common approach to solve linear inverse problems is to use model-based reconstruction methods, which rely on the knowledge of the forward operator $A$ to formulate an optimization problem that can be solved using numerical algorithms.
+
+\subsection{Data-driven methods}
+
+\subsubsection{Network architecture}
+
+\paragraph{Back-projection network}
+\paragraph{Unrolled optimization network}
+\paragraph{Recon-UNet}
+
+\subsubsection{Loss function}
+
+\paragraph{Variationnal methods}
+\paragraph{Supervised learning}
+\paragraph{Self-supervised learning}
+
+\subsubsection{Measurement splitting}
+
+\subsubsection{Equivariant imaging}
+
+\subsection{Plug-and-play/RED methods}
