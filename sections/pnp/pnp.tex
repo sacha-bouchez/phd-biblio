@@ -1,77 +1,94 @@
 \section{Plug-and-play methods and Regularization by denoising}
 
-\subsection{Maximum a Posteriori}
-A classical approach is to formalize this problem through the \textit{Maximum a Posteriori} estimation while balancing a data fidelity term and a regularizing term. Baye's rule gives $p(x|y) = \frac{p(y|x)p(x)}{p(y)}$, where $p(y|x)$ is the likelihood, $p(x)$ the prior and $p(y)$ the evidence. The MAP estimator is given by:
+\subsection{MAP cost function and proximal algorithms}
 
-\begin{equation}
-    \hat{x} = \arg \max_x p(x|y) = \arg \max_x p(y|x)p(x)
-\end{equation}
-
+Let use consider the linear inverse problem from \eqref{eq:inverse-problem}
+and let $p(y|x)$ be the likelihood of the measurements $y$ given the unknown image $x$, and $p(x)$ be the prior distribution of the unknown image.
+The goal is to find an estimate $\hat{x}$ of the unknown image $x$ that maximizes the posterior distribution $p(x|y)$, which can be expressed using Bayes' theorem as:
+\begin{equation*}
+    \hat{x} = \arg \max_x p(x|y) = \arg \max_x p(y|x)p(x).
+\end{equation*}
 Taking the negative logarithm, we obtain the following minimization problem:
 \begin{equation}
-    \hat{x} = \arg \min_x f(x, y) - \lambda s(x)
+    \hat{x} = \arg \min_x f(x, y) - \beta s(x)
+    \label{eq:map}
 \end{equation}
+where $-\ln p(x) = s(x) + C$ and under the likelihood  $p(y | x) \propto \exp(f(x, y))$, where $f(x)$ is the data fidelity term and $\beta$ is a hyperparameter balancing the two terms.
+The choice of the function $s$ is crucial as it encodes the prior knowledge about the unknown image $x$ and thus defines the regularization of the inverse problem.
+One of the most common choices for $s$ is the Total Variation (TV) regularization, which promotes piecewise constant images and is defined as the $\ell_1$ norm of the image gradient \cite{Rudin1992}. Another popular choice is the Tikhonov regularization, which promotes smooth images and is defined as the squared $\ell_2$ norm of a linear transformation of the image \cite{tikhonov1977solutions}.
 
-where $-\ln p(x) = s(x) + C$ and under the likelihood  $p(y | x) \propto \exp(f(x, y))$, where $f(x)$ is the data fidelity term and $\lambda$ is a hyperparameter balancing the two terms.
+\subsubsection{Proximal algorithms}
 
-\paragraph{Regularization}
-This term defines how much the reconstruction process must rely on the chosen prior knowledge. We will refer to it as regularizing from now on.
-This optimisation is however challenging in practive as the score $-\nabla \ln p(x)$ is often ill-conditioned and $f$ is not convex enough.
-Thus, choosing prior knowledge and tuning the balancing term are crucial to solve such ill-posed inverse problems.
-Among the most naïve regularization strategies, we can cite the Total Variation or thiknonov regularization, respectively defined as :
+\begin{definition}
+    The proximal operator of a function $g$ is defined as:
+    \begin{equation*}
+        \operatorname{prox}_g(z) = \arg \min_x \frac{1}{2} \|x - z\|_2^2 + g(x).
+    \end{equation*}
+\end{definition}
 
-\begin{equation}
-    s_{TV}(x) = \|\nabla x\|_1
-\end{equation} 
-\begin{equation}
-    s_{Tikhonov}(x) = \|\Gamma x\|_2^2
-\end{equation}
-
-\paragraph{Iterative algorithms} There is a wide range of iterative algorithms to find good MAP estimators. We can mention the Forward-Backward Splitting algorithm which consists of two steps within each iteration : we first perform the gradient descent on data fidelity term $f(x, y)$ before estimating the proximal of the chosen regularizer $s(x)$ (see \ref{alg:pnp-fbs}).
-
-Then the Alternating Direction Method of Multipliers (ADMM) \cite{boyd_distributed_2010} is another popular algorithm which consists in splitting the optimization problem into two sub-problems, one for each term of the MAP objective, and iteratively solving them while enforcing consistency between the two solutions (see \ref{alg:pnp-fbs}).
-
+Generally, the solution of the MAP problem in \eqref{eq:map} does not have a closed-form expression and must be found using iterative optimization algorithms.
+A common strategy is to split the optimization problem into two sub-problems, one for the data fidelity term and one for the regularization term, and iteratively solve them while enforcing consistency between the two solutions.
+\cite{https://doi.org/10.48550/arxiv.0912.3522} propose a first order splitting algorithm to solve the proximal problem, which consists in performing a gradient descent step on the data fidelity term followed by a proximal step on the regularization term.
+We can also mention the Half Quadratic Splitting (HQS) algorithm \cite{392335}.
 \begin{algorithm}
-    \caption{Plug-and-Play Forward--Backward Splitting (PnP-FBS)}
-    \label{alg:pnp-fbs}
+    \caption{Half Quadratic Splitting (HQS)}
+    \label{alg:hqs}
     \begin{algorithmic}[1]
-        \Require initial $x_0$, measurements $y$, step size $\tau>0$, regularization weight $\lambda$, max iterations $K$
+        \Require initial $x_0$, measurements $y$, penalty parameter $\rho>0$, max iterations $K$
         \For{$k=0,\dots,K-1$}
-            \State $z_k \gets x_k - \tau \nabla_x f(x_k,y)$
-            \State $x_{k+1} \gets \operatorname{prox}_{\tau\lambda s}(z_k)$ \Comment{or replace prox by a denoiser $D_{\sigma}$ for PnP}
+            \State $z_k \gets \arg \min_z f(z,y) + \frac{\rho}{2} \|z - x_k\|_2^2$
+            \State $x_{k+1} \gets \arg \min_x s(x) + \frac{\rho}{2} \|x - z_k\|_2^2$
         \EndFor
         \Ensure $x_K$
     \end{algorithmic}
 \end{algorithm}
+Then the Alternating Direction Method of Multipliers (ADMM) \cite{boyd_distributed_2010} is a more general algorithm that can be applied to a wider range of problems, including non-convex problems, and has been shown to have good convergence properties.
+The idea is to use the augmented Lagrangian to enforce the consistency between the two sub-problems.
+% \begin{algorithm}
+%     \caption{Plug-and-Play Forward--Backward Splitting (PnP-FBS)}
+%     \label{alg:pnp-fbs}
+%     \begin{algorithmic}[1]
+%         \Require initial $x_0$, measurements $y$, step size $\tau>0$, regularization weight $\lambda$, max iterations $K$
+%         \For{$k=0,\dots,K-1$}
+%             \State $z_k \gets x_k - \tau \nabla_x f(x_k,y)$
+%             \State $x_{k+1} \gets \operatorname{prox}_{\tau\lambda s}(z_k)$ \Comment{or replace prox by a denoiser $D_{\sigma}$ for PnP}
+%         \EndFor
+%         \Ensure $x_K$
+%     \end{algorithmic}
+% \end{algorithm}
 % ADMM algorithm
 \begin{algorithm}
-    \caption{Plug-and-Play ADMM (PnP-ADMM)}
+    \caption{ADMM}
     \label{alg:pnp-admm}
     \begin{algorithmic}[1]
         \Require initial $x_0$, $v_0$, $u_0$, measurements $y$, penalty parameter $\rho>0$, max iterations $K$
         \For{$k=0,\dots,K-1$}
             \State $x_{k+1} \gets \arg \min_x f(x,y) + \frac{\rho}{2} \|x - v_k + u_k\|_2^2$
-            \State $v_{k+1} \gets \operatorname{prox}_{\frac{1}{\rho} s}(x_{k+1} + u_k)$ \Comment{or replace prox by a denoiser $D_{\sigma}$ for PnP}
+            \State $v_{k+1} \gets \operatorname{prox}_{\frac{1}{\rho} s}(x_{k+1} + u_k)$ %\Comment{or replace prox by a denoiser $D_{\sigma}$ for PnP}
             \State $u_{k+1} \gets u_k + x_{k+1} - v_{k+1}$
         \EndFor
         \Ensure $x_K$
     \end{algorithmic}
 \end{algorithm}
 
+\subsection{Plug-and-Play methods}
 
-\subsection{Plug-and-Play Priors}
+\subsection{Regularization by denoising}
 
-In order to solve the MAP problem, on may choose to regularize the optimisation process with the Plug-and-Play framework, as first introduced by \authoryearcite{venkatakrishnan_plug-and-play_2013}. The idea is to plug a pre-trained denoiser $D_{\sigma}$ with given noise variance, which will be our prior.
-This denoiser is often trained under the Minimum mean Squared Error (MMSE) objective, which leads it to learn the expectation of the posterior $\mathbb{E}\left[X | Y = y\right]$ for a given sample $y$.
-Venkatakrishnan et al. are plugging it into the Alternating Direction Method of Multipliers (ADMM) \cite{boyd_distributed_2010} as a replacement of the intractable proximal step.
-\authoryearcite{modrzyk_convergent_nodate} proposed another iterative Plug-and-Play algorithm called Majorization-Minimization which is meant to solve linear Poisson inverse problems. 
+Regularization by denoising (RED) is a framework that leverages the power of denoising algorithms to solve problems of the form \eqref{eq:map} \cite{RED_romano}.
+The core idea is to replace $s$ with an explicit regularization function defined as:
+\begin{equation*}
+    s(x) = \frac{1}{2} x^T (x - D(x))
+\end{equation*}
+where $D$ is a denoising operator.
+The motivation behind this choice is that the regularization term encourages the solution to be close to its denoised counterpart.
 
-However, previous approaches have a limitation as the denoiser is often not designed to match the proximal operator it replaces in the ADMM algorithm.
-\authoryearcite{pesme_map_2025} proposed a novel recusrion framework with vanishing noise to overcome this limitation.
+\cite{RED_romano} show that image denoisers are locally homogeneous (LH), \textit{i.e.} $D((1+ \alpha) x) = (1+ \alpha) D(x)$ for sufficiently small $\alpha \neq 0$.
+Under this condition, they claim that the regularizer obey the gradient rule :
+\begin{equation*}
+    \nabla s(x) = x - D(x).
+\end{equation*}
+and propose several iterative algorithms to solve the resulting optimization problem under quadratic loss as the data-fidelity term, including gradient descent, ADMM and the fixed-point strategy.
 
-\paragraph{Flow matching}
-
-Flow matching is a generative modeling technique that aims to learn a velocity field that transforms a simple distribution (like Gaussian noise) into a complex target distribution (like images) through an ordinary differential equation (ODE).
-As done by \authoryearcite{martin_pnp-flow_2025}, the denoiser that replaces the proximal operator in the FBS algorithm can be a time-dependant denoiser $D_t := Id (1-t)v_t^{\theta}$ built from a pre-trained velocity field $v_t^{\theta}$.
-This operator is specifically designed to denoise inputs from the straight path $X_t = (1 - t)X_0 + tX_1$ with $X_0$ and $x_1$ being the noise and target distribution domain respectively.
-In contrary to the regular PnP-FBS algorithm, if the result of the gradient $z$ is not in the support of $X_t$, it is brought back there through an interpolation step before applying the PnP denoising step.
+\cite{RED_clarifications} later show that the LH condition is not sufficient to guarantee the gradient rule, and that the denoiser must also have a symmetric Jacobian matrix, \textit{i.e.} $J_D(x) = J_D(x)^T$ for all $x$.
+This condition is not satisfied by many popular denoisers, such as BM3D \cite{BM3D} and DnCNN \cite{DnCNN}, which limits the applicability of the RED framework.

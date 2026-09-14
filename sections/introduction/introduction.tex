@@ -1,4 +1,238 @@
-\section{Positron Emission Tomography (PET)}
+\chapter{General introduction}
+
+\section{Introduction to linear inverse problems}
+
+The main focus of this section is to present mathematical inverse problems, which are problems where we aim to recover an underlying signal from indirect and noisy measurements. These problems are common in various fields such as image reconstruction, signal processing, and machine learning.
+We limit ourselves to linear inverse problems in finite dimensions. This allows us to derive theoretical results and develop efficient algorithms for solving these problems.
+
+Let $(\Omega, \mathcal{F}, \mathbb{P})$ be a probability space and $X: \Omega \to \mathcal{X}$ a random variable representing the true signal. We assume that we have access to measurements $Y: \Omega \to \mathcal{Y}$ that are related to the true signal through a linear operator $A: \mathcal{X} \to \mathcal{Y}$ and corrupted by a noise process $\mathcal{C}$. The measurement model can be written as:
+\begin{equation}
+    Y | X=x \sim \mathcal{C}(Ax)
+    \label{eq:inverse-problem}
+\end{equation}
+
+In most setups, we work in high dimensions and the forward operator $A$ is not directly invertible, which makes the problem of recovering $X$ from $Y$ an ill-posed inverse problem.
+
+\begin{definition}
+    $A$ is said to be ill-posed if one of the following properties is not satisfied :
+\begin{enumerate}
+    \item $A$ is injective, i.e. $\forall x_1, x_2 \in \mathcal{X}, Ax_1 = Ax_2 \implies x_1 = x_2$.
+    \item $A$ is surjective, i.e. $\forall y \in \mathcal{Y}, \exists x \in \mathcal{X}$ such as $y = Ax$.
+    \item $A^{-1}$ is continuous, i.e. $\forall \epsilon > 0, \exists \delta > 0$ such as $\| y_1 - y_2 \| < \delta \implies \| A^{-1}y_1 - A^{-1}y_2 \| < \epsilon$.
+\end{enumerate}
+\end{definition}
+
+\begin{remark}
+    Note that in finite dimention, linear bijections are always continuous and thus the third condition is automatically satisfied.
+\end{remark}
+
+If $A$ is ill-posed, then it is obviously not a bijection and its null-space is not reduced to $\{0\}$.
+This means that there exist many solutions to the inverse problem for a given measurement, eventhough we're looking for a unique solution.
+
+
+\begin{definition}{Minimal-norm solution}
+    \begin{enumerate}
+    \item $x \in \mathcal{X}$ is a least-squares solution if 
+    \begin{equation*}
+        \| Ax - y \| = \inf_{z \in \mathcal{X}} \| Az - y \|
+    \end{equation*}
+    \item $x \in \mathcal{X}$ is a minimal-norm solution if it is a least-squares solution and $\| x \| = \inf_{z \in \mathcal{X}, Az = y} \| z \|$.
+    \end{enumerate}
+\end{definition}
+
+% \begin{definition}{Convergence of solution sequence}
+%     Let $(y_\delta)_{\delta > 0}$ be a sequence of measurements such that $\| y_\delta - y \| \leq \delta$.
+%     This sequence is said to be convergent with regard to an inverse operator $A^\dagger$ if the sequence of minimal-norm solutions $(x_\delta)_{\delta > 0}$ defined by $x_\delta = A^\dagger y_\delta$ converges to the minimal-norm solution $x^\dagger$ of $y$, i.e. $\lim_{\delta \to 0} \| x_\delta - x^\dagger \| = 0$.
+
+% \end{definition}
+
+
+\begin{proposition}
+    If $A \in \mathcal{L}(\mathcal{X}, \mathcal{Y})$ is a bounded operator and if a least square solution exists, then the minimal-norm solution is unique and is given by $ x ^\dagger = A^\dagger y$ where $A^\dagger$ is the Moore-Penrose pseudo-inverse of $A$. \cite{sherry2025part}
+\end{proposition}
+
+\subsection{Regularisation of inverse problems}
+
+If the range of $A$ is not closed, then Moore-Penrose pseudo-inverse may not be well-posed.
+Thus, given noisy data $y_\delta$ such that $\| y_\delta - y \| \leq \delta$, the least-squares solution $A^\dagger y_\delta$ may not converge to the minimal-norm solution $x^\dagger$ as $\delta \to 0$.
+This is the reason why we need to replace $A^\dagger$ with a family of well-posed and bounded operators $(R_\alpha)_{\alpha > 0}$, called regularisation operators, that approximate $A^\dagger$ as $\alpha \to 0$, hence the following definition.
+
+\begin{definition}{Regularisation}
+    A family of continuous operators $(R_\alpha)_{\alpha > 0}$ is called a regularisation of $A^\dagger$ if $\lim_{\alpha \to 0} R_\alpha y = A^\dagger y$ for all $y \in \mathcal{Y}$.
+\end{definition}
+
+$\alpha$ is called the regularisation parameter. Setting it to a small value allows us to get a good approximation of the minimal-norm solution, but it also makes the regularisation operator more sensitive to noise. On the other hand, setting $\alpha$ to a large value makes the regularisation operator more robust to noise, but it also leads to a worse approximation of the minimal-norm solution. Therefore, choosing an appropriate value for $\alpha$ is crucial for obtaining good reconstruction results.
+This can be seen thanks to the following observation :
+\begin{equation*}
+    \begin{aligned}
+        \| R_\alpha y_\delta - x^\dagger \| &\leq \| R_\alpha y_\delta - R_\alpha y \| + \| R_\alpha y - A^\dagger y \| \\
+        & \leq \delta \| R_\alpha \| + \| R_\alpha y - A^\dagger y \|
+    \end{aligned}
+\end{equation*}
+where the first term is some noise amplification term and the second term is some approximation error term. The first term is increasing with $\alpha$ while the second term is decreasing with $\alpha$, which means that there is a trade-off between noise amplification and approximation error when choosing $\alpha$.
+This decomposition also indicates that the regularisation parameter $\alpha$ should be chosen according to the noise level $\delta$ in order to achieve a good reconstruction performance.
+
+\subsubsection{Parameter choice rule}
+
+\begin{definition}{Parameter choice rule}
+    A parameter choice rule is a function $\alpha: \mathbb{R}^+ \times \mathcal{Y} \to \mathbb{R}^+ \mapsto \alpha(\delta, y_\delta)$.
+    There are three parameter choice rule families :
+    \begin{itemize}
+        \item A priori parameter choice rule : $\alpha$ depends only on $\delta$.
+        \item A posteriori parameter choice rule : $\alpha$ depends only on $y_\delta$.
+        \item Heuristic parameter choice rule : $\alpha$ depends on both $\delta$ and $y_\delta$.
+    \end{itemize}
+\end{definition}
+
+
+In this case, we can still define the minimal-norm solution as the limit of the least-squares solutions for a sequence of measurements that converges to $y$ :
+
+\begin{equation*}
+    x^\dagger = \lim_{\delta \to 0} A^\dagger y_\delta
+\end{equation*}
+
+\subsection{Spectral regularisation}
+
+\subsubsection{Operator compactness}
+
+\begin{definition}
+    An operator $A \in \mathcal{L}(\mathcal{X}, \mathcal{Y})$ is said to be compact if for avery subset $B$ of $\mathcal{X}$ that is bounded, the image closure $\overline{A(B)}$ is compact in $\mathcal{Y}$.
+\end{definition}
+
+\begin{theorem}{Singular value decomposition}
+    Let $A \in \mathcal{L}(\mathcal{X}, \mathcal{Y})$ be a compact operator. Then there exist :
+    
+    \begin{itemize}
+        \item a sequence of positive real numbers $(\sigma_n)_{n \in \mathbb{N}}$ called singular values of $A$ such that $\sigma_n \to 0$ as $n \to \infty$ and $\sigma_1 \geq \sigma_2 \geq \cdots > 0$.
+        \item an orthonormal basis $(x_i)$ of $\text{ker}(A^\perp)$.
+        \item an orthonormal basis $(y_i)$ of $\overline{\text{ran}(A)}$
+    \end{itemize}
+        such that :
+    \begin{equation*}
+        A x_i = \sigma_i y_i, \quad A^* y_i = \sigma_i x_i
+    \end{equation*}
+    with $A^*$ being the adjoint of $A$, and we have the following representation of $A$ and $A^*$ :
+    \begin{equation*}
+        \begin{cases}
+            \displaystyle A x = \sum_{n=1}^\infty \sigma_n \langle x, x_n \rangle y_n \\
+            \displaystyle A^* y = \sum_{n=1}^\infty \sigma_n \langle y, y_n \rangle x_n
+        \end{cases}
+    \end{equation*}
+\end{theorem}
+
+\begin{theorem}
+    Let $A \in \mathcal{L}(\mathcal{X}, \mathcal{Y})$ be a compact operator with singular value decomposition $(\sigma_n, x_n, y_n)_{n \in \mathbb{N}}$ given by the previous theorem. 
+    Then the Moore-Penrose pseudo-inverse of $A$ is given by :
+    \begin{equation*}
+        A^\dagger y = \sum_{n=1}^\infty \frac{1}{\sigma_n} \langle y, y_n \rangle x_n
+    \end{equation*}
+\end{theorem}
+
+Most linear inverse problems are modelled by compact operators, which means that the singular values of $A$ tend to zero as their index goes to infinity. This is the reason why the Moore-Penrose pseudo-inverse is not well-posed, since it involves dividing by the singular values of $A$ which can be arbitrarily small and very close to zero.
+
+\subsubsection{Truncated singular value decomposition}
+
+A good choice of a regularizer could be the singular value decomposition of $A$ :
+
+\begin{equation*}
+    R_\alpha y = \sum_{n=1}^\infty g_\alpha(\sigma_n) \langle y, y_n \rangle x_n
+\end{equation*}
+with $g_\alpha$ being a family of functions such that $\lim_{\alpha \to 0} g_\alpha(\sigma) = \frac{1}{\sigma}$ for all $\sigma > 0$ and $g_\alpha(0) = 0$ for all $\alpha > 0$.
+
+Then one can choose to set $g_\alpha$ as the truncated singular value decomposition, which is defined as follows :
+\begin{equation*}
+    g_\alpha(\sigma) = \begin{cases}
+        \frac{1}{\sigma} & \text{if } \sigma \geq \alpha \\
+        0 & \text{if } \sigma < \alpha
+    \end{cases}
+\end{equation*}
+
+The regularizer can then be written as :
+\begin{equation*}
+    R_\alpha y = \sum_{\sigma_n \geq \alpha} \frac{1}{\sigma_n} \langle y, y_n \rangle x_n
+\end{equation*}
+which is now a finite sum and thus well-posed. However, this regularizer is not very robust to noise since it still involves dividing by the singular values of $A$ which can be close to zero.
+
+\subsubsection{Tikhonov regularisation}
+
+The Tikhonov regularisation also uses the singular value decomposition of $A$ but with a different choice of the function $g_\alpha$ :
+\begin{equation*}
+    g_\alpha(\sigma) = \frac{\sigma}{\sigma^2 + \alpha}
+\end{equation*}
+
+The regularizer can then be written as :
+\begin{equation*}
+    R_\alpha y = \sum_{n=1}^\infty \frac{\sigma_n}{\sigma_n^2 + \alpha} \langle y, y_n \rangle x_n
+\end{equation*}
+which is now a well-posed regularizer that is more robust to noise than the truncated singular value decomposition since it does not involve dividing by the singular values of $A$ but rather dividing by a shifted version of the singular values which are always greater than or equal to $\alpha$.
+
+
+
+\subsection{Gibbs-Markov Random Fields}
+
+\begin{definition}{Gibbs Fields}
+A Gibbs field is a graph where each node is a random variable and the edges represent the relationships between the variables.
+A clique is a fully connected subset of nodes in a graph. We denote the set of all cliques as $\mathcal{C}$.
+For a given set of random variables $\mathbf{X}$ defined on a Gibbs Field, their joint probability can be written as :
+
+\begin{equation}
+    p(\mathbf{X}) = \frac{1}{Z} \prod_{c_i \in \mathcal{C}} \psi_i(c_i)
+\end{equation}
+where $\psi_i(c_i)$ is an implicit potential function defined on the clique $c_i$ and $Z$ is a normalization constant.
+\end{definition}
+
+
+\begin{definition}{Markov Random Fields (MRFs)}
+    A Gibbs field is a graph where each node is a random variable and the edges represent the dependencies between the variables. Two nodes are independant if they are not connected by an edge.
+\end{definition}
+
+
+\begin{theorem}{Hammersley-Clifford Theorem}
+    For any choice of positive potential functions $\psi_i$, a Markov Random Field and a Gibbs Field are equivalent with regard to the same graph.
+    In other words,
+    \begin{itemize}
+        \item The Gibbs distribution defined on a Markov Random Field can be expressed as a product of potential functions over the cliques of the graph.
+        \item Conversely, any positive distribution that factorizes according to the cliques of a graph can be represented as a Gibbs distribution on that graph.
+    \end{itemize} 
+\end{theorem}
+
+We will consider that conditions for the Hammersley-Clifford theorem are satisfied, and we will use the terms Gibbs Fields and Markov Random Fields interchangeably.
+In the context of image processing, the random variables are the pixel values of the image, and the edges represent the spatial relationships between neighboring pixels. The potential functions $\psi_i$ encode our prior knowledge about the image, such as smoothness or edge preservation.
+In practice, the potential functions are often defined on pairs of neighboring pixels, which leads to the following formulation for the regularization term $R(x)$:
+
+\begin{equation}
+    R(x) = \sum_{j} \sum_{k \in N(j)} w_{jk} \phi(x_j, x_k)
+    \label{eq:mrf}
+\end{equation}
+where $N(j)$ is the set of neighboring pixels of pixel $j$, $w_{jk}$ is a weight that controls the strength of the interaction between pixels $j$ and $k$, and $\phi$ is a potential function that defines the type of regularization applied to the differences between neighboring pixels.
+
+\paragraph{$l_2$ penalty (Quadratic)}
+
+One of the most basic choice for the potential function $\phi$ is the quadratic function, first proposed by \cite{tikhonov1977solutions}, known as \textbf{Tikhonov regularization}. It encourages global smoothness by penalizing the squared differences between neighboring pixels. The side effect of this regularization is that it can oversmooth the image and blur edges, which are important features in medical imaging as we want to distinguish between different tissues and structures.
+\begin{equation}
+    \phi(x_j, x_k) = (x_j - x_k)^2
+\end{equation}
+
+\paragraph{$l_1$ penalty (Total Variation)}
+
+In order to preserve edges while still encouraging smoothness, the \textbf{Total Variation (TV)} regularization was proposed by \cite{Rudin1992}. It penalizes the absolute differences between neighboring pixels, which allows for sharp transitions in the image while still reducing noise in homogeneous regions.
+\begin{equation}
+    \phi(x_j, x_k) = |x_j - x_k|
+\end{equation}
+
+\paragraph{Huber penalty}
+
+Hybrid penalties combine the advantages of both $l_2$ and $l_1$ regularization by applying a quadratic penalty to small differences and a linear penalty to large differences. This allows for smoothness in homogeneous regions while preserving edges. One example of a hybrid penalty is the Huber function, which is defined as follows:
+\begin{equation}
+    \phi(x_j, x_k) = \begin{cases}
+        \displaystyle \frac{(x_j - x_k)^2}{2 \delta}  & \text{if } |x_j - x_k| \leq \delta \\
+        \displaystyle |x_j - x_k| - \frac{\delta}{2} & \text{if } |x_j - x_k| > \delta
+    \end{cases}
+\end{equation}
+
+
+
+\section{Introduction to Positron Emission Tomography (PET)}
 
 \subsection{How PET works}
 
@@ -230,67 +464,6 @@ The penalized likelihood approach allows us to incorporate various types of prio
 The choice of the regularization function $R(x)$ must alleviate the ill-posedness of the reconstruction problem while preserving important features of the image, such as edges and textures.
 The following paragraph presents some commonly used regularization functions in PET image reconstruction.
 
-\paragraph{Gibbs-Markov Random Fields}
-
-\begin{definition}{Gibbs Fields}
-A Gibbs field is a graph where each node is a random variable and the edges represent the relationships between the variables.
-A clique is a fully connected subset of nodes in a graph. We denote the set of all cliques as $\mathcal{C}$.
-For a given set of random variables $\mathbf{X}$ defined on a Gibbs Field, their joint probability can be written as :
-
-\begin{equation}
-    p(\mathbf{X}) = \frac{1}{Z} \prod_{c_i \in \mathcal{C}} \psi_i(c_i)
-\end{equation}
-where $\psi_i(c_i)$ is an implicit potential function defined on the clique $c_i$ and $Z$ is a normalization constant.
-\end{definition}
-
-
-\begin{definition}{Markov Random Fields (MRFs)}
-    A Gibbs field is a graph where each node is a random variable and the edges represent the dependencies between the variables. Two nodes are independant if they are not connected by an edge.
-\end{definition}
-
-
-\begin{theorem}{Hammersley-Clifford Theorem}
-    For any choice of positive potential functions $\psi_i$, a Markov Random Field and a Gibbs Field are equivalent with regard to the same graph.
-    In other words,
-    \begin{itemize}
-        \item The Gibbs distribution defined on a Markov Random Field can be expressed as a product of potential functions over the cliques of the graph.
-        \item Conversely, any positive distribution that factorizes according to the cliques of a graph can be represented as a Gibbs distribution on that graph.
-    \end{itemize} 
-\end{theorem}
-
-We will consider that conditions for the Hammersley-Clifford theorem are satisfied, and we will use the terms Gibbs Fields and Markov Random Fields interchangeably.
-In the context of image processing, the random variables are the pixel values of the image, and the edges represent the spatial relationships between neighboring pixels. The potential functions $\psi_i$ encode our prior knowledge about the image, such as smoothness or edge preservation.
-In practice, the potential functions are often defined on pairs of neighboring pixels, which leads to the following formulation for the regularization term $R(x)$:
-
-\begin{equation}
-    R(x) = \sum_{j} \sum_{k \in N(j)} w_{jk} \phi(x_j, x_k)
-    \label{eq:mrf}
-\end{equation}
-where $N(j)$ is the set of neighboring pixels of pixel $j$, $w_{jk}$ is a weight that controls the strength of the interaction between pixels $j$ and $k$, and $\phi$ is a potential function that defines the type of regularization applied to the differences between neighboring pixels.
-
-\subparagraph{$l_2$ penalty (Quadratic)}
-
-One of the most basic choice for the potential function $\phi$ is the quadratic function, first proposed by \cite{tikhonov1977solutions}, known as \textbf{Tikhonov regularization}. It encourages global smoothness by penalizing the squared differences between neighboring pixels. The side effect of this regularization is that it can oversmooth the image and blur edges, which are important features in medical imaging as we want to distinguish between different tissues and structures.
-\begin{equation}
-    \phi(x_j, x_k) = (x_j - x_k)^2
-\end{equation}
-
-\subparagraph{$l_1$ penalty (Total Variation)}
-
-In order to preserve edges while still encouraging smoothness, the \textbf{Total Variation (TV)} regularization was proposed by \cite{Rudin1992}. It penalizes the absolute differences between neighboring pixels, which allows for sharp transitions in the image while still reducing noise in homogeneous regions.
-\begin{equation}
-    \phi(x_j, x_k) = |x_j - x_k|
-\end{equation}
-
-\subparagraph{Huber penalty}
-
-Hybrid penalties combine the advantages of both $l_2$ and $l_1$ regularization by applying a quadratic penalty to small differences and a linear penalty to large differences. This allows for smoothness in homogeneous regions while preserving edges. One example of a hybrid penalty is the Huber function, which is defined as follows:
-\begin{equation}
-    \phi(x_j, x_k) = \begin{cases}
-        \displaystyle \frac{(x_j - x_k)^2}{2 \delta}  & \text{if } |x_j - x_k| \leq \delta \\
-        \displaystyle |x_j - x_k| - \frac{\delta}{2} & \text{if } |x_j - x_k| > \delta
-    \end{cases}
-\end{equation}
 
 \subparagraph{Relative Difference penalty}
 
@@ -323,9 +496,3 @@ This prior information can be used in a similar iterative algorithm as MLEM or O
 \end{algorithmic}
 \label{alg:mapem}
 \end{algorithm}
-
-
-\subsection{Deep learning for PET image reconstruction}
-
-\subsubsection{Supervised methods}
-\subsubsection{Unrolling techniques}
