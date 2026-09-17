@@ -160,6 +160,7 @@ We can highlight an intriguing application of \cite{kim_noise2score_nodate} who 
 
 \subsection{Stein's Unbiased Risk Estimator}
 
+\newpage
 \section{The Noise2Noise framework}
 
 A seminal work in the denoising field is the \textbf{Noise2Noise} framework \cite{lehtinen_noise2noise_2018}.
@@ -172,8 +173,6 @@ Noise2noise can be extended to the case of linear inverse problems in a more gen
 \eqref{eq:inverse-problem} to present the Noise2Noise framework and its theoretical guarantees.
 
 Let's first consider the most basic case of pure denoising, i.e. when $A = I$ in \eqref{eq:inverse-problem}.
-In order to avoid confusion, we will not write $Y = AX + B$ but rather $Y = X + B$ in the following.
-
 Let $Y^{(1)}$ and $Y^{(2)}$ be two noisy observations of the same underlying clean image $X$ obtained through the same corruption process $\mathcal{C}$ but with different realizations of the noise.
 Thus, the noisy pairs are generated according to the following noise model :
 
@@ -184,17 +183,13 @@ Thus, the noisy pairs are generated according to the following noise model :
 
 Let $\{(Y_i^{(1)}, Y_i^{(2)})\}_{i=1}^N$ be a finite sequence of independant and statistically distributed random variables.
 We denote as $y_i^{(j)}$ the observed noisy images for $j = 1, 2$ and $i = 1, \dots, N$.
-
 We train a neural network $f_\theta$ with parameters $\theta$ to map the noisy image $y_i^{(1)}$ to the other noisy image $y_i^{(2)}$ both representing a different corruption of the same underlying clean image $x_i$ and vice versa by minimizing the following loss function :
-
 \begin{equation}
     \mathcal{L}_{\text{N2N}}(\theta) = \frac{1}{2N} \sum_{i=1}^N \left[ \rho(f_\theta(y_i^{(1)}), y_i^{(2)}) + \rho(f_\theta(y_i^{(2)}), y_i^{(1)}) \right]
     \label{eq:n2n_loss}
 \end{equation}
 with $\rho$ a loss function such as the Mean Squared Error (MSE), the Mean Absolute Error (MAE) or any other appropriate loss.
-
 The supervised counterparts of \eqref{eq:n2n_loss} would be :
-
 \begin{equation}
     \mathcal{L}_{\text{clean}}(\theta) = \frac{1}{N} \sum_{i=1}^N \rho(f_\theta(y_i), x_i) 
     \label{eq:supervised_loss}
@@ -203,7 +198,18 @@ with $y_i$ being a noisy observation of the clean image $x_i$.
 
 One can have the intuition that the loss \eqref{eq:n2n_loss} is not equivalent to the supervised loss \eqref{eq:supervised_loss} as we do not have access to the clean image $x_i$.
 Intuitively, a Noise2Noise-trained model will learn to push a sample toward the mean of the distribution of the noisy samples as illustrated in Figure \ref{fig:noise2noise}.
-
+More rigorously, Definition \ref{def:n2n_compatible} formalizes the notion of Noise2Noise-compatible loss function and corruption process, which is a necessary condition for the Noise2Noise framework to be equivalent to the supervised learning framework.
+\begin{definition}{Noise2Noise property}
+    \label{def:n2n_compatible}
+    Let $(\rho, \mathcal{C})$ be a couple of loss function and corruption process.
+    The Noise2Noise framework is equivalent to its supervised counterpart under some conditions on $(\rho, \mathcal{C})$ which satisfies the \ref{eq:n2n_compatible} Property if
+    the minimization of \eqref{eq:n2n_loss} gives the same estimator as the minimization of \eqref{eq:supervised_loss} as $N \to \infty$ :
+    \begin{equation}
+        \label{eq:n2n_compatible}
+        \tag{N2N}
+        \argmin_\theta \mathbb{E}_{Y^{(1)}, Y^{(2)}}[\rho(f_\theta(Y^{(1)}), Y^{(2)})] = \argmin_\theta \mathbb{E}_{Y, X}[\rho(f_\theta(Y), X)]
+    \end{equation}
+\end{definition}
 \begin{figure}
     \centering
         \begin{tikzpicture}
@@ -226,36 +232,37 @@ Intuitively, a Noise2Noise-trained model will learn to push a sample toward the 
     \label{fig:noise2noise}
 \end{figure}
 
-\subsection{Specific settings for Noise2Noise}
+\subsection{Theoretical guarantees of Noise2Noise}
 
 \paragraph{MSE loss case}
 
+The Minimum Squared Error (MSE) loss function is a very common choice for denoising tasks. It is defined as follows :
+\begin{equation}
+    \rho(x, y) = \| x - y \|_2^2    
+\end{equation}
+\noindent We show here that the MSE loss function has interesting properties regarding Noise2Noise.
+
+\begin{definition}
+    We say that a noise model is centered if the expected value of the noisy observation $Y$ given the clean image $X=x$ is equal to $x$, i.e. $\mathbb{E}[Y | X=x] = x$.
+\end{definition}
+
 \begin{proposition}
     \label{prop:noise2noise_l2}
-    Minimizing \eqref{eq:n2n_loss} with $\rho(x, y) = \| x - y \|_2^2$ gives the same estimator as minimizing \eqref{eq:supervised_loss} as $N \to \infty$ under the following conditions :
-    \begin{itemize}
-        \item $Y^{(1)}$ and $Y^{(2)}$ are independent given the clean image $X$ (i.e. $Y^{(1)} | X \independent Y^{(2)} | X$).
-        \item Noise is centered, i.e. $\mathbb{E}[Y^{(j)} | X^{(j)} = x] = x$ for $j = 1, 2$.
-    \end{itemize}
+    If $Y^{(1)}$ and $Y^{(2)}$ are independent given the clean image $X$ (i.e. $Y^{(1)} | X \independent Y^{(2)} | X$),
+    the MSE associated with any centered noise distribution, satisfy the Noise2Noise property \eqref{eq:n2n_compatible}.
 \end{proposition}
-
 \begin{proof}
     We expand the Noise2Noise empirical risk as follows :
     \begin{align*}
-        R_{N,1}^{n2n}(\theta) &= \frac{1}{N} \sum_{i=1}^N \left[ \| f_\theta(Y_i^{(1)}) - (X^{(i)} + B^{(2)}) \|_2^2 \right] \\
-        &= \frac{1}{N} \sum_{i=1}^N \left[ \|( f_\theta(Y_i^{(1)}) - X^{(i)}) - B^{(2)} \|_2^2 \right] \\
-        &= R_{N,1}^{clean}(\theta) + \frac{1}{N} \sum_{i=1}^N \left[ \| B^{(2)} \|_2^2 \right] - \frac{2}{N} \sum_{i=1}^N \left[ (f_\theta(Y_i^{(1)}) - X^{(i)})^T B^{(2)} \right]
+        R_{N, 1}^{N2N}(\theta) &= \frac{1}{N} \sum_{i=1}^N \left[ \| f_\theta(Y_i^{(1)}) - Y_i^{(2)} \|_2^2 \right] \\
+        &= \frac{1}{N} \sum_{i=1}^N \left[ \| f_\theta(Y_i^{(1)}) - X + (X - Y_i^{(2)}) \|_2^2 \right] \\
+        &= R_{N, 1}^{clean}(\theta) + \frac{1}{N} \sum_{i=1}^N \left[ \| X - Y_i^{(2)} \|_2^2 \right] + \frac{2}{N} \sum_{i=1}^N \left[ (f_\theta(Y_i^{(1)}) - X)^T (X - Y_i^{(2)}) \right]
     \end{align*}
-    However, $\frac{2}{N} \sum_{i=1}^N \left[ (f_\theta(Y_i^{(1)}) - X^{(i)})^T B^{(2)} \right] \xrightarrow[N \to \infty]{a.s.} 2 \mathbb{E} \left[ (f_\theta(Y^{(1)}) - X)^T B^{(2)} \right]$ by the law of large numbers. This expectation vanishes under the independence and zero-mean assumptions on the noise.
-    Thus, we have :
+    However, $\frac{2}{N} \sum_{i=1}^N \left[ (f_\theta(Y_i^{(1)}) - X)^T (X - Y_i^{(2)}) \right] \xrightarrow[N \to \infty]{a.s.} 2 \mathbb{E} \left[ (f_\theta(Y^{(1)}) - X)^T (X - Y^{(2)}) \right]$ by the law of large numbers. This expectation vanishes under the independence assumptions :
     \begin{equation*}
-        R_{N,1}^{n2n}(\theta) = R_{N,1}^{clean}(\theta) + \frac{1}{N} \sum_{i=1}^N \left[ \| B^{(2)} \|_2^2 \right] + o(1)
+        R_{N, 1}^{N2N}(\theta) = R_{N, 1}^{clean}(\theta) + \mathbb{E} \left[ \| X - Y^{(2)} \|_2^2 \right] + o(1)
     \end{equation*}
-    We show a similar result for the second term of the Noise2Noise empirical risk by swapping $Y^{(1)}$ and $Y^{(2)}$ and we get the following result :
-    \begin{equation*}
-        R_{N}^{n2n}(\theta) = 2 R_{N}^{clean}(\theta) + \frac{1}{N} \sum_{i=1}^N \left[ \| B_i^{(1)} \|_2^2 + \| B_i^{(2)} \|_2^2 \right] + o(1)
-    \end{equation*}
-    where we are left with the standard clean denoising empirical risk with its underlying bias and variance decomposition, and an irreductible noise variance term which has no influence as it is independent of $\theta$.
+    the second term being an irreductible variance term independant of $\theta$.
 \end{proof}
 
 \subsubsection{MSE Noise2Noise loss for aggregated outputs}
@@ -330,10 +337,7 @@ Taking the negative logarithm of this likelihood gives us the Poisson negative l
 
 \begin{proposition}
     \label{prop:noise2noise_poisson}
-    If $Y | X=x \sim \text{Poisson}(x)$, then minimizing \eqref{eq:n2n_loss} with $\rho = \mathcal{L}_{Poisson}$ gives the same estimator as minimizing \eqref{eq:supervised_loss} as $N \to \infty$ under the following conditions :
-    \begin{itemize}
-        \item $Y^{(1)}$ and $Y^{(2)}$ are independent given the clean image $X$ (i.e. $Y^{(1)} | X \independent Y^{(2)} | X$)..
-    \end{itemize}
+    If $Y^{(1)}$ and $Y^{(2)}$ are independent given the clean image $X$ (i.e. $Y^{(1)} | X \independent Y^{(2)} | X$), then $\rho = \mathcal{L}_{Poisson}$ associated with Poisson noise model ($Y | X=x \sim \text{Poisson}(x)$) satisfy the Noise2Noise property \eqref{eq:n2n_compatible}.
 \end{proposition}
 
 \begin{proof}
@@ -343,7 +347,7 @@ Taking the negative logarithm of this likelihood gives us the Poisson negative l
     \end{equation*}
     We expand the Noise2Noise Poisson empirical risk as follows :
     \begin{align*}
-        R_{N,1}^{n2n}(\theta) &= \frac{1}{N} \sum_{i=1}^N \left[ \mathcal{L}_{Poisson}(f_\theta(Y_i^{(1)}), Y_i^{(2)}) \right] \\
+        R_{N,1}^{N2N}(\theta) &= \frac{1}{N} \sum_{i=1}^N \left[ \mathcal{L}_{Poisson}(f_\theta(Y_i^{(1)}), Y_i^{(2)}) \right] \\
         &= \frac{1}{N} \sum_{i=1}^N \left[ f_\theta(Y_i^{(1)}) - Y_i^{(2)} \log(f_\theta(Y_i^{(1)})) + \log(Y_i^{(2)}!) \right]
     \end{align*}
     Yet, $\frac{1}{N} \sum_{i=1}^N Y_i^{(2)} \log(f_\theta(Y_i^{(1)})) \xrightarrow[N \to \infty]{a.s.} \mathbb{E} \left[ Y^{(2)} \log(f_\theta(Y^{(1)})) \right]$ due to the law of large numbers. Under the independence assumption on the noise, this expectation can be rewritten as 
@@ -352,16 +356,15 @@ Taking the negative logarithm of this likelihood gives us the Poisson negative l
     \end{align*}
     Then, the empirical risk satisfies the following almost sure convergence :
     \begin{align*}
-        R_{N,1}^{n2n}(\theta) \xrightarrow[N \to \infty]{a.s.} \mathbb{E} \left[ f_\theta(Y^{(1)}) - X \log(f_\theta(Y^{(1)})) + \log(Y^{(2)}!) \right]
+        R_{N,1}^{N2N}(\theta) \xrightarrow[N \to \infty]{a.s.} \mathbb{E} \left[ f_\theta(Y^{(1)}) - X \log(f_\theta(Y^{(1)})) + \log(Y^{(2)}!) \right]
     \end{align*}
     We can do the same for the second term of the loss by swapping $Y^{(1)}$ and $Y^{(2)}$ and we get the following result :
     \begin{equation*}
-        R_{N}^{n2n}(\theta) \xrightarrow[N \to \infty]{a.s.} 2 \mathbb{E} \left[ f_\theta(Y) - X \log(f_\theta(Y)) + \log(Y!)\right]
+        R_{N}^{N2N}(\theta) \xrightarrow[N \to \infty]{a.s.} 2 \mathbb{E} \left[ f_\theta(Y) - X \log(f_\theta(Y)) + \log(Y!)\right]
     \end{equation*}
     where we are left with the standard clean poisson negative-log likelihood risk plus a constant term independent of $\theta$.
 \end{proof}
 
-\subsection{General Noise2Noise theory}
 
 In proofs of Proposition \ref{prop:noise2noise_l2} and \ref{prop:noise2noise_poisson}, we can see that the empirical risks of the Noise2Noise loss functions are asymptotically the same
 up to an additional term independent of the parameters $\theta$ to be optimized, hence leading to the same optimal solution.
@@ -413,22 +416,10 @@ If this term is independent of the parameters $\theta$, then minimizing the Nois
 
 \begin{corollary}
     \label{coro:delta}
-    The minimization of $R^{\text{N2N}}(\theta)$ yields the same parameters as the minimization of $R^{\text{clean}}(\theta)$ if and only if $\Delta_\rho(z, x)$ is independent of $z$.
+    The Noise2Noise property \eqref{eq:n2n_compatible} is satisfied if and only if $\Delta_\rho(z, x)$ is independent of $z$.
 \end{corollary}
 
-\subsubsection{Noise2Noise for centered noise}
-
-\begin{definition}
-    We say that a noise model is centered if the expected value of the noisy observation $Y$ given the clean image $X=x$ is equal to $x$, i.e. $\mathbb{E}[Y | X=x] = x$.
-\end{definition}
-
-\begin{proposition}
-    \label{prop:noise2noise_centered_mse}
-    If the noise is centered, i.e. $\mathbb{E}[Y | X=x] = x$, then minimizing the Noise2Noise loss with the MSE loss function is equivalent to minimizing the supervised loss as $N \to \infty$.
-\end{proposition}
-
-\begin{proof}
-If the MSE loss function is used, the noise-induced loss bias is calculated as follows :
+We can give a new demonstration of Proposition \ref{prop:noise2noise_l2} using the noise-induced loss bias formalism with the MSE loss function :
 \begin{align*}
     \Delta_\rho(z, x) &= \mathbb{E}[\| z - Y \|_2^2 | X=x] - \| z - x \|_2^2 \\
     &= \mathbb{E}[\| z - x + (x - Y) \|_2^2 | X=x] - \| z - x \|_2^2 \\
@@ -436,15 +427,23 @@ If the MSE loss function is used, the noise-induced loss bias is calculated as f
     &\quad - \| z - x \|_2^2 \\
     &= \mathbb{E}[\| x - Y \|_2^2 | X=x] + 2 \langle z - x, \mathbb{E}[x - Y | X=x] \rangle
 \end{align*}
-According to corollary \ref{coro:delta}, we need this quantity to be independent of $z$. Thus, we need the term $\langle z - x, \mathbb{E}[x - Y | X=x] \rangle$ to vanish for all $z$, which is equivalent to having $\mathbb{E}[Y | X=x] = x$.
-\end{proof}
+\noindent According to corollary \ref{coro:delta}, we need this quantity to be independent of $z$. Thus, we need the term $\langle z - x, \mathbb{E}[x - Y | X=x] \rangle$ to vanish for all $z$, which is equivalent to having $\mathbb{E}[Y | X=x] = x$.
 
-Note that we recover the result of Proposition \ref{prop:noise2noise_l2} in the case of additive centered noise and the MSE loss function.
-We have proven that the Noise2Noise framework, combined with the use of the MSE loss function, is valid for any noise model as long as the noise is centered around its clean counterpart,
+In summary, we have proven that the Noise2Noise framework, combined with the use of the MSE loss function, is valid for any noise model as long as the noise is centered around its clean counterpart,
 in addition to the independence assumption between the two noisy observations given the clean image.
-For example, if $Y|X=x$ follows a log-normal distribution, then $\mathbb{E}[Y|X=x] = x \exp(\sigma^2/2) \neq x$ and the Noise2Noise framework with the MSE loss function is not valid in this case.
+For example, if $Y|X=x$ follows a log-normal distribution, then $\mathbb{E}[Y|X=x] = x \exp(\sigma^2/2) \neq x$ and the Noise2Noise property \eqref{eq:n2n_compatible} doesn't hold in this case.
 
-\subsubsection{Toward the exponential family of distributions}
+\subsubsection{Particular case of the MAE loss}
+
+The Minimum Absolute Error (MAE) loss function is defined as $\rho(z, y) = \| z - y \|_1$ is a special case or the Noise2Noise framework.
+Its noise-induced loss bias is given by $\Delta_\rho(z, x) = \mathbb{E}[\| z - Y \|_1 | X=x] - \| z - x \|_1$.
+If $g_x(z) = \mathbb{E}[\| z - Y \|_1 | X=x]$, then $g_x'(z) = 2 \mathbb{P}(Y \leq z | X=x) - 1 = 2 F_{Y|X=x}(z) - 1$ where $F_{Y|X=x}$ is the cumulative distribution function of $Y$ given $X=x$.
+In order to apply Corollary \ref{coro:delta}, we need $g_x'(z) = 0$ for all $z$, which is equivalent to having $F_{Y|X=x}(z) = 1/2$ for all $z$, which is impossible.
+Thus, the MAE loss function is not appropriate for the Noise2Noise framework ; whereas the supervised loss with the MAE loss function will converge to the conditional median of $Y$ given $X=x$, the Noise2Noise loss will not converge to any well-defined estimator.
+
+
+\subsection{Toward the exponential family of distributions}
+
 As we already saw in the case of the MSE loss under gaussian noise and the Poisson negative log-likelihood loss under Poisson noise, the additional term $\mathbb{E}[\Delta_\rho(f_\theta(Y), X)]$ is respectively equal to the variance of the noise and a constant term independent of $\theta$.
 We can show that this property can be extended under some asumptions to the exponential family of distributions and for the corresponding negative log-likelihood loss function.
 \begin{definition}
@@ -468,27 +467,16 @@ Then, computing the noise-induced loss bias gives us :
 For this quantity to be independent of $z$, we need the term $\langle \mathbb{E}[T(Y) | X=x] - T(x), \eta(z) \rangle$ to vanish, which is equivalent to having $\mathbb{E}[T(Y) | X=x] = T(x)$, hence Proposition \ref{prop:ef_n2n}.
 \begin{proposition}
     \label{prop:ef_n2n}
-    For a noise model belonging to the exponential family, if the sufficient statistic $T(Y)$ is an unbiased estimator of $T(X)$, then minimizing the Noise2Noise loss with the corresponding negative log-likelihood loss function is equivalent to minimizing the supervised loss as $N \to \infty$.
+    A noise model belonging to the exponential family associated with its corresponding negative log-likelihood loss function satisfies the Noise2Noise property \eqref{eq:n2n_compatible} if and only if the sufficient statistic $T(Y)$ is an unbiased estimator of $T(X)$ :
+    \begin{equation}
+        \mathbb{E}[T(Y) | X=x] = T(x)
+    \end{equation}
 \end{proposition}
-Note that this property of the sufficient statistics is satisfied for Gaussian and Poisson distributions as we have already seen in Proposition \ref{prop:noise2noise_l2} and \ref{prop:noise2noise_poisson}
+\noindent Note that this property of the sufficient statistics is satisfied for Gaussian and Poisson distributions as we have already seen in Proposition \ref{prop:noise2noise_l2} and \ref{prop:noise2noise_poisson}
 but also for other distributions like the Bernoulli distribution, the Exponential distribution, or the Gamma distribution.
 On the other hand, the log-normal distribution belongs to the exponential family but its sufficient statistic is $T(Y) = (\log Y, (\log Y)^2)$.
 $\mathbb{E}[\log Y | X=x] = \log x - \frac{\sigma^2}{2}$ and $\mathbb{E}[(\log Y)^2 | X=x] = (\log x)^2 + \sigma^2 - \sigma^2 \log x + \frac{\sigma^4}{4}$, hence the sufficient statistic is not an unbiased estimator of $T(X) = (\log X, (\log X)^2)$.
 
-\subsubsection{Empirical Noise2Noise}
-
-The two previous paragraphs show that neither the MSE loss function nor the log-normal negative log-likelihood loss function are appropriate for the Noise2Noise framework under log-normal noise.
-For log-normal distributions or any other noise model that doesn't satisfy either the centered noise assumption or the sufficient statistic unbiasedness assumption,
-we can empirically observe that the Noise2Noise framework will indeed tend to denoise the images but will not converge to the supervised solution as the number of training samples increases.
-In such cases, we lack interpretability as the resulting estimator is no longer the optimal solution of a well-defined supervised loss function or even a MMSE estimator in some cases.
-
-\subsubsection{Particular case of the MAE loss}
-
-The Minimum Absolute Error (MAE) loss function is defined as $\rho(z, y) = \| z - y \|_1$ is a special case or the Noise2Noise framework.
-Its noise-induced loss bias is given by $\Delta_\rho(z, x) = \mathbb{E}[\| z - Y \|_1 | X=x] - \| z - x \|_1$.
-If $g_x(z) = \mathbb{E}[\| z - Y \|_1 | X=x]$, then $g_x'(z) = 2 \mathbb{P}(Y \leq z | X=x) - 1 = 2 F_{Y|X=x}(z) - 1$ where $F_{Y|X=x}$ is the cumulative distribution function of $Y$ given $X=x$.
-In order to apply Corollary \ref{coro:delta}, we need $g_x'(z) = 0$ for all $z$, which is equivalent to having $F_{Y|X=x}(z) = 1/2$ for all $z$, which is impossible.
-Thus, the MAE loss function is not appropriate for the Noise2Noise framework ; whereas the supervised loss with the MAE loss function will converge to the conditional median of $Y$ given $X=x$, the Noise2Noise loss will not converge to any well-defined estimator.
 
 \subsection{Extension to Bregman Geometry}
 
@@ -524,7 +512,7 @@ We can now state the following propositions regarding the Noise2Noise framework 
 
 \begin{proposition}
     \label{prop:b_target_first}
-    If noise is centered, i.e. $\mathbb{E}[Y | X=x] = x$, then minimizing the Noise2Noise loss with a \textbf{target-first} Bregman divergence yields the same estimator as minimizing the supervised loss as $N \to \infty$.
+    If noise is centered, i.e. $\mathbb{E}[Y | X=x] = x$, then \textbf{target-first} Bregman divergence associated to any noise model satisfies the Noise2Noise property \eqref{eq:n2n_compatible}.
 \end{proposition}
 \begin{proof}
     We derive the noise-induced loss bias in the context of Bregman geometry with target-first Bregman divergence :
@@ -537,7 +525,7 @@ The term in $z$ vanishes as $\mathbb{E}[Y | X=x] = x$.
 \end{proof}
 \noindent Proposition \ref{prop:b_target_first} states that any target-first Bregman divergence suits the Noise2Noise framework, but the performance of the resulting estimator will depend on the choice of the Bregman divergence which has to be adapted to the noise model.
 \begin{proposition}
-    Minimizing the Noise2Noise loss with a \textbf{prediction-first} Bregman divergence yields the same estimator as minimizing the supervised loss as $N \to \infty$ if and only if :
+    A \textbf{prediction-first} Bregman divergence associated with any noise model satisfies the Noise2Noise property \eqref{eq:n2n_compatible} if and only if the following condition holds :
     \begin{equation}
         \label{prop:b_prediction_first}
         \mathbb{E}[\nabla \phi(Y) | X=x] = \nabla \phi(x)
@@ -576,7 +564,7 @@ Plugging $\phi(z) = \frac{1}{2} z^T Q z$ into the Bregman divergence definition 
     &= \frac{1}{2} (z - y)^T Q (z - y)
 \end{align}
 \noindent which is the Mahalanobis distance between $z$ and $y$ with respect to the positive definite matrix $Q$.
-This is basically a generalization of Proposition \ref{prop:noise2noise_centered_mse}.
+This is basically a generalization of Proposition \ref{prop:noise2noise_l2}.
 This means that any weighted MSE loss function with a positive definite weight matrix $Q$ is appropriate for the Noise2Noise framework under centered noise.
 This has some potential benefits in the case of correlated noise where the covariance matrix of the noise is not diagonal, as the Mahalanobis distance can be used to decorrelate the noise and improve the denoising performance.
 One can also choose diagonal weights to give more importance to some pixels than others, for example in the case of a region of interest in the image or sensitivity maps in medical imaging.
@@ -606,13 +594,14 @@ One can also choose diagonal weights to give more importance to some pixels than
 % Both the denoising model and the normalizing flow are trained jointly using pairs of noisy images under the following loss function :
 
 % \begin{equation}
-%     \mathcal{L}(\theta, \phi) =  \underset{\substack{y_1, y_2 \sim p_{noisy}}}{\mathbb{E}} \left[ - \log p_{N_\phi}(y_1 | f_\theta(y_2)) - \log p_{N_\phi}(y_2 | f_\theta(y_1)) \right] + \lambda \mathcal{L}_{n2n}(\theta)
+%     \mathcal{L}(\theta, \phi) =  \underset{\substack{y_1, y_2 \sim p_{noisy}}}{\mathbb{E}} \left[ - \log p_{N_\phi}(y_1 | f_\theta(y_2)) - \log p_{N_\phi}(y_2 | f_\theta(y_1)) \right] + \lambda \mathcal{L}_{N2N}(\theta)
 % \end{equation}
 
-% with $p_{N_\phi}$ being the noise distribution modeled by the normalizing flow with parameters $\phi$, $f_\theta$ the denoising model with parameters $\theta$ and $\mathcal{L}_{n2n}(\theta)$ the standard Noise2Noise loss. The authors of Noise2NoiseFlow show that this additional term gives more stability to the training process and leads to better denoising results.
+% with $p_{N_\phi}$ being the noise distribution modeled by the normalizing flow with parameters $\phi$, $f_\theta$ the denoising model with parameters $\theta$ and $\mathcal{L}_{N2N}(\theta)$ the standard Noise2Noise loss. The authors of Noise2NoiseFlow show that this additional term gives more stability to the training process and leads to better denoising results.
 
 % Note that this framework is useless if we already know the natural noise distribution in the data as we could directly use it to denoise images using bayesian methods.
 
+\newpage
 \section{Bootstrapping noisy measurements}
 
 In this section, we discuss how to generate two independant measurements to apply Noise2Noise on from a single measurement.
@@ -715,7 +704,7 @@ They study two different training strategies.
 The first one uses the average of the first $K-1$ sinograms as input and the remaining one as target. This strategy is close to the Noise2Self principle.
 The second one is the reversed of the first and is closer to the Noisier2Noise strategy as the input will be noisier than the target.
 
-
+\newpage
 \section{Generalization of Noise2Noise to linear inverse problems}
 
 In this section, we get back to the general framework where $A$ is unspecified.
@@ -746,7 +735,7 @@ In the context of non-blind estimation, i.e. when $A^{(j)}$ is known, we can opt
 \begin{proof}
     Proof in theorem \ref{th:noise2noise_l2} is still valid as long as we replace $f_{\theta}(Y^{(j)})$ by $Af_{\theta}(Y^{(j)})$. We thus have :
     \begin{align*}
-        R_{N}^{n2n}(\theta) &= \frac{1}{N} \sum_{i=1}^N \left[ \| A_i^{(2)} f_{\theta}(Y_i^{(1)}) - Y_i^{(2)} \|_2^2 + \| A_i^{(1)} f_{\theta}(Y_i^{(2)}) - Y_i^{(1)} \|_2^2 \right] \\
+        R_{N}^{N2N}(\theta) &= \frac{1}{N} \sum_{i=1}^N \left[ \| A_i^{(2)} f_{\theta}(Y_i^{(1)}) - Y_i^{(2)} \|_2^2 + \| A_i^{(1)} f_{\theta}(Y_i^{(2)}) - Y_i^{(1)} \|_2^2 \right] \\
         &= 2 R_{N}^{clean}(\theta) + \frac{1}{N} \sum_{i=1}^N \left[ \| B_i^{(1)} \|_2^2 + \| B_i^{(2)} \|_2^2 \right] + o(1)
     \end{align*}
 \end{proof}
@@ -766,11 +755,11 @@ With the conventions of section \ref{sec:noise2noise_poisson}, we now consider t
 \begin{proof}
     Proof in theorem \ref{th:noise2noise_poisson} is still valid as long as we replace $f_{\theta}(Y^{(j)})$ by $A f_{\theta}(Y^{(j)})$. If we define the empirical risk as :
     \begin{equation*}
-        R_{N}^{n2n}(\theta) = \frac{1}{N} \sum_{i=1}^N \left[ \mathcal{L}_{Poisson}(A_i^{(2)} f_{\theta}(Y_i^{(1)}), Y_i^{(2)}) + \mathcal{L}_{Poisson}(A_i^{(1)} f_{\theta}(Y_i^{(2)}), Y_i^{(1)}) \right]
+        R_{N}^{N2N}(\theta) = \frac{1}{N} \sum_{i=1}^N \left[ \mathcal{L}_{Poisson}(A_i^{(2)} f_{\theta}(Y_i^{(1)}), Y_i^{(2)}) + \mathcal{L}_{Poisson}(A_i^{(1)} f_{\theta}(Y_i^{(2)}), Y_i^{(1)}) \right]
     \end{equation*}
     then we have :
     \begin{equation*}
-        R_{N}^{n2n}(\theta) \xrightarrow[N \to \infty]{a.s.} 2 \mathbb{E} \left[ f_\theta(Y) - A X \log(f_\theta(Y)) + \log(Y!)\right]
+        R_{N}^{N2N}(\theta) \xrightarrow[N \to \infty]{a.s.} 2 \mathbb{E} \left[ f_\theta(Y) - A X \log(f_\theta(Y)) + \log(Y!)\right]
     \end{equation*}
 \end{proof}
 

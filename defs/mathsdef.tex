@@ -1,0 +1,73 @@
+\def\cl#1{\centerline{#1}} \def\eqcl#1{\cl{$\displaystyle#1$}} \def\eq#1{{$\displaystyle#1$}}
+
+\def\nablab{\text{\boldmath$\nabla$}}
+\def\wh#1{\widehat{#1}}    \def\wt#1{\widetilde{#1}}
+%\def\foo#1{{\text{\def\scad{-3}\tiny #1}}}
+\def\foo#1{\textrm{#1}}
+\def\T{^\tD}
+%\def\T{^T}
+\def\M{^{-1}}
+\def\MT{^{-\tD}}
+\def\+{^\dagger}
+\def\I{\,|\,}           % "sachant" bien espacé pour les formules
+\def\J{\mathop{\,;\,}}  % "point virgule" bien espacé pour les formules.
+\def\w{,\thinspace}
+\def\W{,\thickspace}
+\def\ldotsv{,\,\ldots,\,}
+\def\Exp#1{\exp\acc{#1}}
+\def\Expp#1{e^{#1}}
+\def\argmax{\mathop{\mathrm{arg\,max}}} % Mieux que \def\argmax{\arg\max}
+\def\argmin{\mathop{\mathrm{arg\,min}}} % car l'indice est reparti
+\def\Vect{\mathop{\text{Vect}}}
+\def\Card{\mathrm{Card}}
+\def\Circul#1{\mathrm{Circul}\{#1\}}
+\def\toeplitz#1{\mathrm{T{\oe}plitz}\{#1\}}
+\def\Id{\mathit{Id}}
+\def\cste{\mathrm{cste}}
+\def\tr{\mathrm{tr}}
+\def\rang{{\mathrm{rang}}}
+\def\Cov{\mathrm{Cov}}
+\def\diag{{\mathrm{diag}}}
+\def\Diag{\mathrm{Diag}}
+\def\DIAG#1{\mathrm{Diag}\acc{#1}}
+\def\Ker{\mathrm{Ker\,}}
+\def\Img{\mathrm{Im\,}}
+\def\Div{{\mathrm{div}}}
+\def\FT#1{\protect\accentset{\frown}{#1}}
+% Pour mettre un \No{} au-dessus d'une lettre (\TM, 02/97) (package{amsmath.sty})
+%\def\rond#1{\overset{\kern-0.33em~_\circ}{#1}}
+%\def\rondit[#1]#2{\overset{\kern#1~_\circ}{#2}}
+\def\EL{\mathrm{EL}}
+\def\esp{\ED\,}
+\newcommand{\Esp}[2][]{\ED{_{#1}}\kern-2pt\cro{#2}}
+%\def\Esp#1{\ED\kern-1pt\pth{#1}}
+\def\stdEsp#1{\ED\stdcro{#1}}
+%\def\EMQ{\mathit{EMQ}}
+\def\var{\mathrm{var}\,}	\def\Var#1{\mathrm{var}\pth{#1}}	
+\def\cov{\mathrm{cov}}		\def\Cov#1{\mathrm{cov}\kern-2pt\pth{#1}}
+\def\egal{\kern-.5em=\kern-.5em}
+\def\egdef{\stackrel{\Delta}{=}}
+\newcommand{\imag}[1]{\mathrm{Im}\acc{#1}}
+\newcommand{\reel}[1]{\mathrm{Re}\acc{#1}}
+\newcommand{\impur}{\ensuremath{j}}
+
+\def\sump{\mathop{\raisebox{-.3ex}{\text{\Large$\Sigma$}}}}
+\def\intp{{\text{\small$\int$}}}
+\def\prodp{\mathop{\raisebox{-.3ex}{\text{\Large$\Pi$}}}}
+\newcommand{\fracp}[2]{\frac{\raisebox{-1pt}{$#1$}}{#2}}
+\newcommand{\UNsur}[1]{\fracp{1}{#1}}
+\def\demi{\UNsur{2}}
+\def\ds{\displaystyle}
+\def\ss{\scriptstyle}
+\def\fracds#1#2{{\ds\frac{#1}{#2}}}
+\def\fracts#1#2{{\ss\frac{#1}{#2}}}
+\def\derpar#1#2{{\frac{\partial #1}{\partial #2}}}
+\def\froc#1#2{{#1/#2}}     \def\fric#1#2{\frac1{#2}#1}
+\def\derpor#1#2{{\froc{\partial #1}{\partial #2}}}
+\def\parsec#1#2#3{{\frac{\partial^2 #1}{\partial #2\,\partial #3}}}
+\def\parsecd#1#2{{\frac{\partial^2 #1}{{\partial #2}^2}}}
+\def\porsec#1#2#3{{\froc{\partial^2 #1}{\partial #2\,\partial #3}}}
+\def\porsecd#1#2{{\froc{\partial^2 #1}{{\partial #2}^2}}}
+\def\pornd#1#2#3{{\froc{\partial^{#3} #1}{{\partial #2}^{#3}}}}
+%\def\sur{\ensuremath{\kern-1pt/\kern-1pt}}
+\def\diff#1#2{{\frac{\dd#1}{\dd#2}}}
