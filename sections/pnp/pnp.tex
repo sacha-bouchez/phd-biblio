@@ -1,94 +1,159 @@
-\section{Plug-and-play methods and Regularization by denoising}
+\chapter{Plug-and-play methods and Regularization by denoising}
 
-\subsection{MAP cost function and proximal algorithms}
+\section{Optimization methods for inverse problems}
 
-Let use consider the linear inverse problem from \eqref{eq:inverse-problem}
-and let $p(y|x)$ be the likelihood of the measurements $y$ given the unknown image $x$, and $p(x)$ be the prior distribution of the unknown image.
-The goal is to find an estimate $\hat{x}$ of the unknown image $x$ that maximizes the posterior distribution $p(x|y)$, which can be expressed using Bayes' theorem as:
-\begin{equation*}
-    \hat{x} = \arg \max_x p(x|y) = \arg \max_x p(y|x)p(x).
-\end{equation*}
-Taking the negative logarithm, we obtain the following minimization problem:
-\begin{equation}
-    \hat{x} = \arg \min_x f(x, y) - \beta s(x)
-    \label{eq:map}
-\end{equation}
-where $-\ln p(x) = s(x) + C$ and under the likelihood  $p(y | x) \propto \exp(f(x, y))$, where $f(x)$ is the data fidelity term and $\beta$ is a hyperparameter balancing the two terms.
-The choice of the function $s$ is crucial as it encodes the prior knowledge about the unknown image $x$ and thus defines the regularization of the inverse problem.
-One of the most common choices for $s$ is the Total Variation (TV) regularization, which promotes piecewise constant images and is defined as the $\ell_1$ norm of the image gradient \cite{Rudin1992}. Another popular choice is the Tikhonov regularization, which promotes smooth images and is defined as the squared $\ell_2$ norm of a linear transformation of the image \cite{tikhonov1977solutions}.
+\subsection{Majorization-Minimization algorithms}
 
-\subsubsection{Proximal algorithms}
+\acrfull{mm} is a family of optimization algorithms that iteratively minimizes a surrogate function that majorizes the original objective function.
+The surrogate function is called a \textit{tangent-majorant} and is constructed such that it is easier to minimize than the original objective function.
 
 \begin{definition}
-    The proximal operator of a function $g$ is defined as:
-    \begin{equation*}
-        \operatorname{prox}_g(z) = \arg \min_x \frac{1}{2} \|x - z\|_2^2 + g(x).
-    \end{equation*}
+    A \textit{tangent-majorant} of a function differentiable function$f : \mathbb{R}^n \to \mathbb{R}$ at a point $x_0$ is a function $F$ such that:
+    \begin{enumerate}
+        \item $\forall x \in \mathbb{R}^n, f(x) = F(x,x)$
+        \item $\forall x \in \mathbb{R}^n, f(x) \leq F(x,x_0)$
+    \end{enumerate}
 \end{definition}
-
-Generally, the solution of the MAP problem in \eqref{eq:map} does not have a closed-form expression and must be found using iterative optimization algorithms.
-A common strategy is to split the optimization problem into two sub-problems, one for the data fidelity term and one for the regularization term, and iteratively solve them while enforcing consistency between the two solutions.
-\cite{https://doi.org/10.48550/arxiv.0912.3522} propose a first order splitting algorithm to solve the proximal problem, which consists in performing a gradient descent step on the data fidelity term followed by a proximal step on the regularization term.
-We can also mention the Half Quadratic Splitting (HQS) algorithm \cite{392335}.
+\noindent The \acrshort{mm} algorithm consists in iteratively minimizing the tangent-majorant of the objective function at the current iterate. The next iterate is then obtained by minimizing the tangent-majorant, and the process is repeated until convergence :
 \begin{algorithm}
-    \caption{Half Quadratic Splitting (HQS)}
-    \label{alg:hqs}
+    \caption{Majorization-Minimization Algorithm}
     \begin{algorithmic}[1]
-        \Require initial $x_0$, measurements $y$, penalty parameter $\rho>0$, max iterations $K$
-        \For{$k=0,\dots,K-1$}
-            \State $z_k \gets \arg \min_z f(z,y) + \frac{\rho}{2} \|z - x_k\|_2^2$
-            \State $x_{k+1} \gets \arg \min_x s(x) + \frac{\rho}{2} \|x - z_k\|_2^2$
+        \State Initialize $x_0$
+        \For{$k = 0, 1, 2, \ldots$}
+            \State Compute the tangent-majorant $F(\cdot, x_k)$
+            \State $x_{k+1} = \argmin_x F(x, x_k)$
         \EndFor
-        \Ensure $x_K$
-    \end{algorithmic}
-\end{algorithm}
-Then the Alternating Direction Method of Multipliers (ADMM) \cite{boyd_distributed_2010} is a more general algorithm that can be applied to a wider range of problems, including non-convex problems, and has been shown to have good convergence properties.
-The idea is to use the augmented Lagrangian to enforce the consistency between the two sub-problems.
-% \begin{algorithm}
-%     \caption{Plug-and-Play Forward--Backward Splitting (PnP-FBS)}
-%     \label{alg:pnp-fbs}
-%     \begin{algorithmic}[1]
-%         \Require initial $x_0$, measurements $y$, step size $\tau>0$, regularization weight $\lambda$, max iterations $K$
-%         \For{$k=0,\dots,K-1$}
-%             \State $z_k \gets x_k - \tau \nabla_x f(x_k,y)$
-%             \State $x_{k+1} \gets \operatorname{prox}_{\tau\lambda s}(z_k)$ \Comment{or replace prox by a denoiser $D_{\sigma}$ for PnP}
-%         \EndFor
-%         \Ensure $x_K$
-%     \end{algorithmic}
-% \end{algorithm}
-% ADMM algorithm
-\begin{algorithm}
-    \caption{ADMM}
-    \label{alg:pnp-admm}
-    \begin{algorithmic}[1]
-        \Require initial $x_0$, $v_0$, $u_0$, measurements $y$, penalty parameter $\rho>0$, max iterations $K$
-        \For{$k=0,\dots,K-1$}
-            \State $x_{k+1} \gets \arg \min_x f(x,y) + \frac{\rho}{2} \|x - v_k + u_k\|_2^2$
-            \State $v_{k+1} \gets \operatorname{prox}_{\frac{1}{\rho} s}(x_{k+1} + u_k)$ %\Comment{or replace prox by a denoiser $D_{\sigma}$ for PnP}
-            \State $u_{k+1} \gets u_k + x_{k+1} - v_{k+1}$
-        \EndFor
-        \Ensure $x_K$
     \end{algorithmic}
 \end{algorithm}
 
-\subsection{Plug-and-Play methods}
+\subsubsection{Expectation-minimization algorithms}
 
-\subsection{Regularization by denoising}
+Let $\theta \in \mathbb{R}^n$ be the probability distribution parameters to be estimated. Let $Y \in \mathbb{R}^m$ be the random variable representing the observed data and $Z \in \mathbb{R}^{m \times n}$ be the random variable representing the unobserved or latent data.
+$Z$ is an auxiliary variable that is introduced to simplify the optimization problem and the joint density $p_{Y, Z}(y, z|\theta)$ is called the \textit{complete-data likelihood}.
+Thus, the \textit{observed-data likelihood} $p_{Y}(y|\theta)$ is obtained by marginalizing over the latent variable $Z$:
+\begin{equation}
+    p_{Y}(y|\theta) = \int p_{Y, Z}(y, z|\theta) dz
+\end{equation}
+The \acrfull{em} framework is a specific instance of the \acrshort{mm} algorithm as the tangent-majorant $Q$ is constructed using the expectation of the complete-data log-likelihood \cite{Lange2016,Dempster1977} :
+\begin{align}
+    Q(\theta, \theta_k) &= \mathbb{E}_{Z|Y, \theta_k}[\log p_{Y, Z}(Y, Z|\theta)] \\
+    &= \int_{\mathbb{R}^{m \times n}} \log p_{Y, Z}(Y, z|\theta) p_{Z|Y, \theta_k}(z|Y, \theta_k) dz
+\end{align}
+where $\theta_k$ is the current estimate of the parameters and $\theta$ is the variable to be optimized.
+The \acrshort{em} algorithm consists of two steps: the E-step, where the expectation of the complete-data log-likelihood is computed, and the M-step, where the parameters are updated by maximizing the tangent-majorant $Q$:
+\begin{algorithm}
+    \caption{Expectation-Maximization Algorithm}
+    \begin{algorithmic}[1]
+        \State Initialize $\theta_0$
+        \For{$k = 0, 1, 2, \ldots$}
+            \State E-step: Compute $Q(\theta, \theta_k)$
+            \State M-step: $\theta_{k+1} = \argmax_\theta Q(\theta, \theta_k)$
+        \EndFor
+    \end{algorithmic}
+\end{algorithm}
 
-Regularization by denoising (RED) is a framework that leverages the power of denoising algorithms to solve problems of the form \eqref{eq:map} \cite{RED_romano}.
-The core idea is to replace $s$ with an explicit regularization function defined as:
-\begin{equation*}
-    s(x) = \frac{1}{2} x^T (x - D(x))
-\end{equation*}
-where $D$ is a denoising operator.
-The motivation behind this choice is that the regularization term encourages the solution to be close to its denoised counterpart.
+In the specific setting of Poisson noise, the \acrshort{em} algorithm is known as the \acrfull{mlem} algorithm and is used to estimate the parameters of a Poisson distribution.
+The \acrshort{mlem} algorithm is particularly useful in image reconstruction problems, where the observed data is often corrupted by Poisson noise due to the nature of photon counting in imaging modalities such as \acrfull{pet} and \acrfull{spect}.
+This algorithm was first proposed by \cite{Shepp1982} for PET image reconstruction and has since been widely used in various applications.
+Let now consider the following degradation model -- that is for instance suited for PET imaging -- for the observed data $Y$:
+\begin{equation}
+    Y | X=x \sim \text{Poisson}(A x + b)
+\end{equation}
+where $A \in \mathbb{R}^{m \times n}$ is the system matrix, $b \in \mathbb{R}^m$ is the background noise, and $X \in \mathbb{R}^n$ is the unknown image to be estimated.
+In emmission tomography, a good choice for the latent variable $Z$ is the number of photons emitted from each voxel and detected by each detector, which can be modeled as a Poisson random variable.
+$Z_{ij}$ represents the number of photons emitted from voxel $j$ and detected by detector $i$, and is assumed to follow a Poisson distribution with mean $A_{ij} x_j$:
+\begin{equation}
+    Z_{ij} | X=x \sim \text{Poisson}(A_{ij} x_j) \
+    \forall i Y_i = \sum_{j=1}^{n} Z_{ij}
+\end{equation}
+Plugging this choice of latent variable into the \acrshort{em} framework leads to the following \textit{complete-data likelihood}:
+\begin{equation}
+    p_{Y, Z}(y, z|x) = \prod_{i=1}^{m} \prod_{j=1}^{n} \frac{(A_{ij} x_j)^{z_{ij}} e^{-A_{ij} x_j}}{z_{ij}!}
+\end{equation}
+which we take the logarithm of to obtain the \textit{complete-data log-likelihood}:
+\begin{equation}
+    \log p_{Y, Z}(y, z|x) = \sum_{i=1}^{m} \sum_{j=1}^{n} z_{ij} \log(A_{ij} x_j) - A_{ij} x_j - \log(z_{ij}!)
+\end{equation}
+Now we can compute the tangent-majorant $Q$ by taking the expectation of the complete-data log-likelihood with respect to the conditional distribution of $Z$ given $Y$ and the current estimate $x_k$:
+\begin{align}
+    Q(x, x_k) &= \mathbb{E}_{Z|Y, x_k}[\log p_{Y, Z}(Y, Z|x)] \\
+    &= \sum_{i=1}^{m} \sum_{j=1}^{n} \mathbb{E}_{Z|Y=y, x_k}[Z_{ij}] \log(A_{ij} x_j) - A_{ij} x_j + \mathbb{E}_{Z|Y=y, x_k}[\log(Z_{ij}!)]
+\end{align}
+$\mathbb{E}_{Z|Y, x_k}[\log(Z_{ij}!)]$ being independant of $x$, it can be dropped from the optimization problem and we just have to compute the expectation of $Z_{ij}$ given $Y$ and the current estimate $x_k$:
+$Z$ being conditionned on the sum of its components $Y_i = \sum_{j=1}^{n} Z_{ij}$, it follows a multinomial distribution and we have:
+\begin{equation}
+    \mathbb{E}_{Z|Y=y, x_k}[Z_{ij}] = y_i \frac{A_{ij} x_{k,j}}{\sum_{l=1}^{n} A_{il} x_{k,l}} = y_i \frac{A_{ij} x_{k,j}}{(Ax_k)_i}
+\end{equation}
+which we can now plug into the optimization of the tangent-majorant $Q$ to obtain:
+\begin{equation}
+    Q(x, x_k) = \sum_{i=1}^{m} \sum_{j=1}^{n} y_i \frac{A_{ij} x_{k,j}}{(Ax_k)_i} \log(A_{ij} x_j) - A_{ij} x_j + \text{const}
+\end{equation}
+We take the derivative of $Q$ with respect to each component $x_j$ and set it to zero to find the optimal $x_j$:
+\begin{align}
+    \frac{\partial Q}{\partial x_j} &= \sum_{i=1}^{m} y_i \frac{A_{ij} x_{k,j}}{(Ax_k)_i} \frac{1}{x_j} - \sum_{i=1}^{m} A_{ij} = 0 \\
+    x_j &= \frac{\sum_{i=1}^{m} y_i \frac{A_{ij} x_{k,j}}{(Ax_k)_i}}{\sum_{i=1}^{m} A_{ij}}
+\end{align}
+Setting $x_{k+1,j} = x_j$ gives the update rule for the \acrshort{mlem} algorithm:
+\begin{equation}
+    x_{k+1,j} = \frac{x_{k,j}}{\sum_{i=1}^{m} A_{ij}} \sum_{i=1}^{m} y_i \frac{A_{ij}}{(Ax_k)_i}
+\end{equation}
+The \acrshort{mlem} algorithm is summarized in Algorithm \ref{alg:mlem}.
+\begin{algorithm}
+    \caption{Maximum-Likelihood Expectation-Maximization (MLEM)}
+    \begin{algorithmic}[1]
+    \State \textbf{Input:} Measured data $y$, system matrix $A$, initial estimate $x^{(0)}$
+    \State \textbf{Output:} Estimated image $x^{(k)}$
+    \For{$k = 0$ to $K-1$}
+        \State \textbf{E-step:} Compute the expected number of counts
+        \begin{equation*}
+            \hat{y}_i^{(k)} = (Ax^{(k)})_i
+        \end{equation*}
+        \State \textbf{M-step:} Update the image estimate
+        \begin{equation*}
+            x_j^{(k+1)} = x_j^{(k)} \frac{\sum_{i=1}^{d} A_{ij} \frac{y_i}{\hat{y}_i^{(k)}}}{\sum_{i=1}^{d} A_{ij}}
+        \end{equation*}
+    \EndFor
+    \State \textbf{Return} $x^{(K)}$
+    \end{algorithmic}
+    \label{alg:mlem}
+\end{algorithm}
+This algorithm can be speed up by using the \textit{ordered subsets} technique introduced by \cite{Hudson1994}, which consists in dividing the data into subsets and updating the parameters using each subset in turn. This leads to the \acrfull{osem} algorithm, which is widely used in PET and SPECT image reconstruction.
+Even if the algorithm is not designed to minimized a well-defined cost funcion, the latter converges to an MLEM image in the case of noiseless data, but this might not be true in practice and the solution might not even converge but cycle between similar but distinct images \cite{6152654}.
+However, it is faster to get quality results compared to the MLEM algorithm and can be used in practice with a large number of subsets without significant loss of image quality.
+\begin{algorithm}
+    \caption{Ordered Subset Expectation Maximization (OSEM)}
+    \begin{algorithmic}[1]
+    \State \textbf{Input:} Measured data $y$, system matrix $A$, initial estimate $x^{(0)}$, number of subsets $Q$
+    \State \textbf{Output:} Estimated image $x^{(k)}$
+    \For{$k = 0$ to $K-1$}
+        \For{$q = 1$ to $Q$}
+            \State \textbf{E-step:} Compute the expected number of counts for subset $q$
+            \begin{equation*}
+                \hat{y}_{i}^{(k,q)} = (Ax^{(k)})_i \quad \text{for } i \in \text{subset } q
+            \end{equation*}
+            \State \textbf{M-step:} Update the image estimate using subset $q$
+            \begin{equation*}
+                x_j^{(k,q)} = x_j^{(k,q-1)} \frac{\sum_{i \in \text{subset } q} A_{ij} \frac
+                {y_i}{\hat{y}_i^{(k,q)}}}{\sum_{i \in \text{subset } q} A_{ij}}
+            \end{equation*}
+        \EndFor
+    \EndFor
+    \State \textbf{Return} $x^{(K)}$
+    \end{algorithmic}
+    \label{alg:osem}
+\end{algorithm}
 
-\cite{RED_romano} show that image denoisers are locally homogeneous (LH), \textit{i.e.} $D((1+ \alpha) x) = (1+ \alpha) D(x)$ for sufficiently small $\alpha \neq 0$.
-Under this condition, they claim that the regularizer obey the gradient rule :
-\begin{equation*}
-    \nabla s(x) = x - D(x).
-\end{equation*}
-and propose several iterative algorithms to solve the resulting optimization problem under quadratic loss as the data-fidelity term, including gradient descent, ADMM and the fixed-point strategy.
+\acrfull{mlem} and \acrfull{osem} are particularly sensitive to the noise in the data and the fact that the system matrix is ill-conditionned and can produce images with high variance if the number of iterations is too large.
+Hence, post-processing techniques such as gaussian filtering or denoising techniques are often applied to the reconstructed images to reduce the noise and improve the image quality.
+Another way to tackle this problem is to use regularization techniques. The most common approach with \acrshort{mlem} and \acrshort{osem} is to stop the iterations early, which is known as \textit{early stopping}. This can be seen as a form of regularization, as it prevents the algorithm from overfitting to the noise in the data. % TODO add plots
+These algorithms can also be modified to include a regularization term incorporing prior knowledge in the optimization problem, which can help to reduce the noise and improve the image quality.
 
-\cite{RED_clarifications} later show that the LH condition is not sufficient to guarantee the gradient rule, and that the denoiser must also have a symmetric Jacobian matrix, \textit{i.e.} $J_D(x) = J_D(x)^T$ for all $x$.
-This condition is not satisfied by many popular denoisers, such as BM3D \cite{BM3D} and DnCNN \cite{DnCNN}, which limits the applicability of the RED framework.
+% TODO one-step late and BSREM
+
+\paragraph{One-Step Late Algorithm}
+
+
+
+\subsection{Proximal algorithms}
+
+\subsection{Connection between proximal algorithms and MM algorithms}

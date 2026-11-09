@@ -10,6 +10,8 @@
 \usepackage{amsfonts}
 \usepackage{hyperref}
 
+\usepackage[acronym]{glossaries}
+
 \edef\restoreparindent{\parindent=\the\parindent\relax}
 \usepackage{parskip}
 \restoreparindent
@@ -59,11 +61,11 @@
 
 \DeclareDelimFormat{multicitedelim}{\addcomma\space}
 
-\addbibresource{reference/PET.bib}
-\addbibresource{reference/PnP.bib} % name of your .bib file (explicit path so biber finds it when building from workspace root)
-\addbibresource{reference/optimisation.bib}
-\addbibresource{reference/Self-supervised.bib}
-\addbibresource{reference/denoising.bib}
+
+\addbibresource{reference/inverse_problems.bib}
+\addbibresource{reference/optim.bib}
+\addbibresource{reference/self_supervised.bib}
+\addbibresource{reference/pnp.bib}
 
 %
 \usepackage{indentfirst}
@@ -74,6 +76,11 @@
 \title{PhD Bibliography : Optimization of learning-based methods without ground truth and applicability to positron emision tomography}
 \author{Sacha Bouchez-Delotte}
 \date{\today}
+
+
+
+\input{glossary/glossary.tex}
+
 
 \begin{document}
 
@@ -98,8 +105,17 @@ This doctoral project aims at proposing new statistical learning based methods t
 \include{sections/noise2noise/noise2noise.tex}
 
 \newpage
+\include{sections/pnp/pnp.tex}
+
+\newpage
 \appendix
 \include{sections/appendix/appendix.tex}
+
+
+\clearpage
+
+\printglossary[type=\acronymtype]
+\printglossary
 
 % Print the bibliography
 \newpage

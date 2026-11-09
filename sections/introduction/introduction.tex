@@ -121,7 +121,7 @@ In this case, we can still define the minimal-norm solution as the limit of the 
 \end{theorem}
 
 \begin{theorem}
-    Let $A \in \mathcal{L}(\mathcal{X}, \mathcal{Y})$ be a compact operator with singular value decomposition $(\sigma_n, x_n, y_n)_{n \in \mathbb{N}}$ given by the previous theorem. 
+    Let $A \in \mathcal{L}(\mathcal{X}, \mathcal{Y})$ be a compact operator with singular value decomposition \newline $(\sigma_n, x_n, y_n)_{n \in \mathbb{N}}$ given by the previous theorem. 
     Then the Moore-Penrose pseudo-inverse of $A$ is given by :
     \begin{equation*}
         A^\dagger y = \sum_{n=1}^\infty \frac{1}{\sigma_n} \langle y, y_n \rangle x_n
@@ -327,172 +327,172 @@ To counteract this blurring effect, a filtering step is introduced before the Ba
 
 \subsection{Iterative reconstruction in PET}
 
-\subsubsection{Poisson Bayesian inference}
+% \subsubsection{Poisson Bayesian inference}
 
-In PET imaging, the data acquisition process can be modeled as a Poisson process as the number of detected events in each detector pair follows a Poisson distribution.
-Thus, the likelihood of observing the measured data $y$ given the image $x$ can be expressed as:
-\begin{equation}
-    p(y|x) = \prod_{i=1}^{d} \frac{(y_i(x))^{y_i} e^{-y_i(x)}}{y_i!}
-\end{equation}
-where $y_i(x) = (Ax)_i$ is the expected number of counts in detector pair $i$ given the image $x$. It is modeled as a linear operation of the image through the system matrix $A$. 
+% In PET imaging, the data acquisition process can be modeled as a Poisson process as the number of detected events in each detector pair follows a Poisson distribution.
+% Thus, the likelihood of observing the measured data $y$ given the image $x$ can be expressed as:
+% \begin{equation}
+%     p(y|x) = \prod_{i=1}^{d} \frac{(y_i(x))^{y_i} e^{-y_i(x)}}{y_i!}
+% \end{equation}
+% where $y_i(x) = (Ax)_i$ is the expected number of counts in detector pair $i$ given the image $x$. It is modeled as a linear operation of the image through the system matrix $A$. 
 
-The aim is to estimate the image $x$ that maximizes the likelihood of the unobserved data $x$ given the observed data $y$. This is known as the Maximum Likelihood (ML) estimation. We will transform this formulation into a minimization problem by taking the negative log-likelihood:
-\begin{equation}
-    \hat{x}_{\text{ML}} = \arg \min_{x} \sum_{i=1}^{d} \left( (Ax)_i - y_i \log (Ax)_i\right)
-    \label{eq:ml_estimation}
-\end{equation}
+% The aim is to estimate the image $x$ that maximizes the likelihood of the unobserved data $x$ given the observed data $y$. This is known as the Maximum Likelihood (ML) estimation. We will transform this formulation into a minimization problem by taking the negative log-likelihood:
+% \begin{equation}
+%     \hat{x}_{\text{ML}} = \arg \min_{x} \sum_{i=1}^{d} \left( (Ax)_i - y_i \log (Ax)_i\right)
+%     \label{eq:ml_estimation}
+% \end{equation}
 
-However, one may not want to find the optimal solution of \eqref{eq:ml_estimation} as $A$ is ill-conditionned. Hence, several strategies such as penalization, iteration truncation or post-filtering can be applied to the output of the algorithm to improve image quality.
+% However, one may not want to find the optimal solution of \eqref{eq:ml_estimation} as $A$ is ill-conditionned. Hence, several strategies such as penalization, iteration truncation or post-filtering can be applied to the output of the algorithm to improve image quality.
 
-\subsubsection{Maximum-Likelihood Expectation-Maximization (MLEM)}
+% \subsubsection{Maximum-Likelihood Expectation-Maximization (MLEM)}
 
-Among iterative algorithms for PET reconstruction, the \textbf{Maximum-Likelihood Expectation-Maximization (MLEM)} proposed by \cite{Shepp1982} is one of the most widely used. It is an iterative method to find the ML estimate \eqref{eq:ml_estimation} of the image $x$ given the measured data $y$.
+% Among iterative algorithms for PET reconstruction, the \textbf{Maximum-Likelihood Expectation-Maximization (MLEM)} proposed by \cite{Shepp1982} is one of the most widely used. It is an iterative method to find the ML estimate \eqref{eq:ml_estimation} of the image $x$ given the measured data $y$.
 
-The MLEM algorithm is guaranteed to converge to a global minimum, providing an estimate of the image $x$ that is consistent with the measured data $y$ under the Poisson noise model \cite{8467338}.
-However, it can be slow to converge and can produce noisy images if the number of iterations is too high.
-In order to address this, iterations can be stopped early, or output can be post-processed or post-filtered.
+% The MLEM algorithm is guaranteed to converge to a global minimum, providing an estimate of the image $x$ that is consistent with the measured data $y$ under the Poisson noise model \cite{8467338}.
+% However, it can be slow to converge and can produce noisy images if the number of iterations is too high.
+% In order to address this, iterations can be stopped early, or output can be post-processed or post-filtered.
 
-\begin{algorithm}
-\caption{Maximum-Likelihood Expectation-Maximization (MLEM)}
-\begin{algorithmic}[1]
-\State \textbf{Input:} Measured data $y$, system matrix $A$, initial estimate $x^{(0)}$
-\State \textbf{Output:} Estimated image $x^{(k)}$
-\For{$k = 0$ to $K-1$}
-    \State \textbf{E-step:} Compute the expected number of counts
-    \begin{equation*}
-        \hat{y}_i^{(k)} = (Ax^{(k)})_i
-    \end{equation*}
-    \State \textbf{M-step:} Update the image estimate
-    \begin{equation*}
-        x_j^{(k+1)} = x_j^{(k)} \frac{\sum_{i=1}^{d} A_{ij} \frac{y_i}{\hat{y}_i^{(k)}}}{\sum_{i=1}^{d} A_{ij}}
-    \end{equation*}
-\EndFor
-\State \textbf{Return} $x^{(K)}$
-\end{algorithmic}
-\label{alg:mlem}
-\end{algorithm}
-
-% \begin{proposition}
-%     The MLEM algorithm converges to a local maximum of the likelihood function, providing an estimate of the image $x$ that is consistent with the measured data $y$ under the Poisson noise model.
-% \end{proposition}
-
-% \begin{proof}
-%     First we compute the complete data ; $z_{ij}$ is the number of photons emitted from voxel $j$ and detected by detector pair $i$. Hence, $y_i$ = $\sum_{j} z_{ij}$ and $\bar{z_{ij}} = a_{ij} x_j$.
-%     The complete data likelihood is given by:
-%     \begin{align*}
-%         &zp(z|x) = \prod_{i=1}^{d} \prod_{j=1}^{n} \frac{(a_{ij} x_j)^{z_{ij}}}{z_{ij}!} e^{-a_{ij} x_j} \\
-%         & \Rightarrow \log p(z|x) = \sum_{i=1}^{d} \sum_{j=1}^{n} \left( z_{ij} \log (a_{ij} x_j) - a_{ij} x_j + K \right) 
-%     \end{align*}
-%     Then we compute its derivative with respect to $x_j$ and set it to zero to find the maximum:
+% \begin{algorithm}
+% \caption{Maximum-Likelihood Expectation-Maximization (MLEM)}
+% \begin{algorithmic}[1]
+% \State \textbf{Input:} Measured data $y$, system matrix $A$, initial estimate $x^{(0)}$
+% \State \textbf{Output:} Estimated image $x^{(k)}$
+% \For{$k = 0$ to $K-1$}
+%     \State \textbf{E-step:} Compute the expected number of counts
 %     \begin{equation*}
-%         \frac{\partial \log p(z|x)}{\partial x_j} = \sum_{i=1}^{d} \left( \frac{z_{ij}}{x_j} - a_{ij} \right) = 0
+%         \hat{y}_i^{(k)} = (Ax^{(k)})_i
 %     \end{equation*}
-%     This leads to the update rule:
+%     \State \textbf{M-step:} Update the image estimate
 %     \begin{equation*}
-%         x_j = \frac{\sum_{i=1}^{d} z_{ij}}{\sum_{i=1}^{d} a_{ij}}
+%         x_j^{(k+1)} = x_j^{(k)} \frac{\sum_{i=1}^{d} A_{ij} \frac{y_i}{\hat{y}_i^{(k)}}}{\sum_{i=1}^{d} A_{ij}}
 %     \end{equation*}
-%     Since $z_{ij}$ is unobserved, we replace it with its expectation given the current estimate $x^{(k)}$:
+% \EndFor
+% \State \textbf{Return} $x^{(K)}$
+% \end{algorithmic}
+% \label{alg:mlem}
+% \end{algorithm}
+
+% % \begin{proposition}
+% %     The MLEM algorithm converges to a local maximum of the likelihood function, providing an estimate of the image $x$ that is consistent with the measured data $y$ under the Poisson noise model.
+% % \end{proposition}
+
+% % \begin{proof}
+% %     First we compute the complete data ; $z_{ij}$ is the number of photons emitted from voxel $j$ and detected by detector pair $i$. Hence, $y_i$ = $\sum_{j} z_{ij}$ and $\bar{z_{ij}} = a_{ij} x_j$.
+% %     The complete data likelihood is given by:
+% %     \begin{align*}
+% %         &zp(z|x) = \prod_{i=1}^{d} \prod_{j=1}^{n} \frac{(a_{ij} x_j)^{z_{ij}}}{z_{ij}!} e^{-a_{ij} x_j} \\
+% %         & \Rightarrow \log p(z|x) = \sum_{i=1}^{d} \sum_{j=1}^{n} \left( z_{ij} \log (a_{ij} x_j) - a_{ij} x_j + K \right) 
+% %     \end{align*}
+% %     Then we compute its derivative with respect to $x_j$ and set it to zero to find the maximum:
+% %     \begin{equation*}
+% %         \frac{\partial \log p(z|x)}{\partial x_j} = \sum_{i=1}^{d} \left( \frac{z_{ij}}{x_j} - a_{ij} \right) = 0
+% %     \end{equation*}
+% %     This leads to the update rule:
+% %     \begin{equation*}
+% %         x_j = \frac{\sum_{i=1}^{d} z_{ij}}{\sum_{i=1}^{d} a_{ij}}
+% %     \end{equation*}
+% %     Since $z_{ij}$ is unobserved, we replace it with its expectation given the current estimate $x^{(k)}$:
+% %     \begin{equation*}
+% %         \hat{z}_{ij}^{(k)} = \mathbb{E}[z_{ij} | y, x^{(k)}] = a_{ij} x_j^{(k)} \frac{y_i}{(Ax^{(k)})_i}
+% %     \end{equation*}
+% %     Substituting this into the update rule gives the M-step of the MLEM algorithm:
+% %     \begin{equation*}
+% %         x_j^{(k+1)} = x_j^{(k)} \frac{\sum_{i=1}^{d} a_{ij} \frac{y_i}{(Ax^{(k)})_i}}{\sum_{i=1}^{d} a_{ij}}
+% %     \end{equation*}
+% %     This iterative process continues until convergence, leading to an estimate of $x$ that maximizes the likelihood function.
+% % \end{proof}
+
+% \subsubsection{Ordered Subset Expectation Maximization (OSEM)}
+
+% In order to speed up the convergence of the MLEM algoritm,
+% the \textbf{Ordered Subset Expectation Maximization (OSEM)} algorithm was proposed by \cite{Hudson1994}. It is a variant of the MLEM algorithm that divides the measured sinogram $y$ into subsets $\left\{y_1, \hdots, y_Q\right\}$ and performs the E-step and M-step from \ref{alg:mlem} on each subset sequentially (see algorithm \ref{alg:osem}).
+
+% Even if the algorithm is not designed to minimized a well-defined cost funcion, the latter converges to an MLEM image in the case of noiseless data, but this might not be true in practice and the solution might not even converge but cycle between similar but distinct images \cite{6152654}.
+% However, it is faster to get quality results compared to the MLEM algorithm and can be used in practice with a large number of subsets without significant loss of image quality.
+% Post-processing or post-filtering can also be applied to the output of the OSEM algorithm to further improve image quality.
+
+% \begin{algorithm}
+% \caption{Ordered Subset Expectation Maximization (OSEM)}
+% \begin{algorithmic}[1]
+% \State \textbf{Input:} Measured data $y$, system matrix $A$, initial estimate $x^{(0)}$, number of subsets $Q$
+% \State \textbf{Output:} Estimated image $x^{(k)}$
+% \For{$k = 0$ to $K-1$}
+%     \For{$q = 1$ to $Q$}
+%         \State \textbf{E-step:} Compute the expected number of counts for subset $q$
+%         \begin{equation*}
+%             \hat{y}_{i}^{(k,q)} = (Ax^{(k)})_i \quad \text{for } i \in \text{subset } q
+%         \end{equation*}
+%         \State \textbf{M-step:} Update the image estimate using subset $q$
+%         \begin{equation*}
+%             x_j^{(k,q)} = x_j^{(k,q-1)} \frac{\sum_{i \in \text{subset } q} A_{ij} \frac
+%             {y_i}{\hat{y}_i^{(k,q)}}}{\sum_{i \in \text{subset } q} A_{ij}}
+%         \end{equation*}
+%     \EndFor
+% \EndFor
+% \State \textbf{Return} $x^{(K)}$
+% \end{algorithmic}
+% \label{alg:osem}
+% \end{algorithm}
+
+% \subsubsection{Penalized reconstruction in PET}
+
+% This reconstruction problem can also be formulatted as a regularized optimization by introducing some prior knowledge on the image $x$.
+% Indeed, Bayes's rule gives us the following expression for the posterior distribution of $x$ given $y$:
+% \begin{equation}
+%     p(x|y) = \frac{p(y|x) p(x)}{p(y)}
+% \end{equation}
+% where $p(x)$ is the prior distribution of the image $x$ and $p(y)$ is the marginal likelihood of the data $y$.
+% Once again, by taking the negative log-likelihood of $p(x|y)$, we can transform the problem into a penalized likelihood minimization problem:
+% \begin{equation}
+%     \hat{x}_{\text{MAP}} = \arg \min_{x} \left( -\log p(y|x) - \log p(x) \right)
+% \end{equation}
+% where $-\log p(y|x)$ is the data fidelity term and $-\log p(x)$ is the regularization term that encodes our prior knowledge on the image $x$.
+% This prior can be expressed in the following exponential form :
+
+% \begin{equation}
+%     p(x) \propto e^{-\beta R(x)}
+% \end{equation}
+% where $R(x)$ is a regularization function and $\beta$ is a regularization parameter that controls the trade-off between data fidelity and regularization. The optimisation hence becomes:
+
+% \begin{align}
+%     \hat{x}_{\text{MAP}} &= \arg \min_{x} \left( -\log p(y|x) + \beta R(x) \right) \\
+%     &= \arg \min_{x} \left( \sum_{i=1}^{d} \left( (Ax)_i - y_i \log (Ax)_i\right) + \beta R(x) \right)
+%     \label{eq:map_estimation}
+% \end{align}
+
+% The penalized likelihood approach allows us to incorporate various types of prior knowledge about the image, such as smoothness, sparsity, or anatomical information.
+% The choice of the regularization function $R(x)$ must alleviate the ill-posedness of the reconstruction problem while preserving important features of the image, such as edges and textures.
+% The following paragraph presents some commonly used regularization functions in PET image reconstruction.
+
+
+% \subparagraph{Relative Difference penalty}
+
+% The relative differences penalty is a concave prior that has been shown to be effective in PET imaging \cite{Nuyts2002}.
+
+% \begin{equation}
+%     \phi(x_j, x_k) = \frac{(x_j - x_k)^2}{x_j + x_k + \gamma |x_j - x_k|}
+% \end{equation}
+% where the $\gamma$ parameter controls which relative diferences are considered as large.
+
+
+% This prior information can be used in a similar iterative algorithm as MLEM or OSEM. It is called the \textbf{Maximum A Posteriori Expectation-Maximization (MAPEM)} algorithm, and it consists in replacing the M-step of the MLEM algorithm with a step that takes into account the chosen prior $R(x)$ \cite{Green1990}.
+
+% \begin{algorithm}
+% \caption{Maximum A Posteriori Expectation-Maximization (MAPEM)}
+% \begin{algorithmic}[1]
+% \State \textbf{Input:} Measured data $y$, system matrix $A$, initial estimate $x^{(0)}$, regularization parameter $\beta$
+% \State \textbf{Output:} Estimated image $x^{(k)}$
+% \For{$k = 0$ to $K-1$}
+%     \State \textbf{E-step:} Compute the expected number of counts
 %     \begin{equation*}
-%         \hat{z}_{ij}^{(k)} = \mathbb{E}[z_{ij} | y, x^{(k)}] = a_{ij} x_j^{(k)} \frac{y_i}{(Ax^{(k)})_i}
+%         \hat{y}_i^{(k)} = (Ax^{(k)})_i
 %     \end{equation*}
-%     Substituting this into the update rule gives the M-step of the MLEM algorithm:
+%     \State \textbf{M-step:} Update the image estimate by minimizing the penalized likelihood function
 %     \begin{equation*}
-%         x_j^{(k+1)} = x_j^{(k)} \frac{\sum_{i=1}^{d} a_{ij} \frac{y_i}{(Ax^{(k)})_i}}{\sum_{i=1}^{d} a_{ij}}
+%         x_j^{(k+1)} = \frac{x_j^{(k)}}{\displaystyle \sum_{i=1}^{d} A_{ij} + \beta \left.\frac{\partial R(x)}{\partial x_j}\right|_{x=x^{(k)}}}  \sum_{i=1}^{d} A_{ij} \frac{y_i}{\hat{y}_i^{(k)}}
 %     \end{equation*}
-%     This iterative process continues until convergence, leading to an estimate of $x$ that maximizes the likelihood function.
-% \end{proof}
-
-\subsubsection{Ordered Subset Expectation Maximization (OSEM)}
-
-In order to speed up the convergence of the MLEM algoritm,
-the \textbf{Ordered Subset Expectation Maximization (OSEM)} algorithm was proposed by \cite{Hudson1994}. It is a variant of the MLEM algorithm that divides the measured sinogram $y$ into subsets $\left\{y_1, \hdots, y_Q\right\}$ and performs the E-step and M-step from \ref{alg:mlem} on each subset sequentially (see algorithm \ref{alg:osem}).
-
-Even if the algorithm is not designed to minimized a well-defined cost funcion, the latter converges to an MLEM image in the case of noiseless data, but this might not be true in practice and the solution might not even converge but cycle between similar but distinct images \cite{6152654}.
-However, it is faster to get quality results compared to the MLEM algorithm and can be used in practice with a large number of subsets without significant loss of image quality.
-Post-processing or post-filtering can also be applied to the output of the OSEM algorithm to further improve image quality.
-
-\begin{algorithm}
-\caption{Ordered Subset Expectation Maximization (OSEM)}
-\begin{algorithmic}[1]
-\State \textbf{Input:} Measured data $y$, system matrix $A$, initial estimate $x^{(0)}$, number of subsets $Q$
-\State \textbf{Output:} Estimated image $x^{(k)}$
-\For{$k = 0$ to $K-1$}
-    \For{$q = 1$ to $Q$}
-        \State \textbf{E-step:} Compute the expected number of counts for subset $q$
-        \begin{equation*}
-            \hat{y}_{i}^{(k,q)} = (Ax^{(k)})_i \quad \text{for } i \in \text{subset } q
-        \end{equation*}
-        \State \textbf{M-step:} Update the image estimate using subset $q$
-        \begin{equation*}
-            x_j^{(k,q)} = x_j^{(k,q-1)} \frac{\sum_{i \in \text{subset } q} A_{ij} \frac
-            {y_i}{\hat{y}_i^{(k,q)}}}{\sum_{i \in \text{subset } q} A_{ij}}
-        \end{equation*}
-    \EndFor
-\EndFor
-\State \textbf{Return} $x^{(K)}$
-\end{algorithmic}
-\label{alg:osem}
-\end{algorithm}
-
-\subsubsection{Penalized reconstruction in PET}
-
-This reconstruction problem can also be formulatted as a regularized optimization by introducing some prior knowledge on the image $x$.
-Indeed, Bayes's rule gives us the following expression for the posterior distribution of $x$ given $y$:
-\begin{equation}
-    p(x|y) = \frac{p(y|x) p(x)}{p(y)}
-\end{equation}
-where $p(x)$ is the prior distribution of the image $x$ and $p(y)$ is the marginal likelihood of the data $y$.
-Once again, by taking the negative log-likelihood of $p(x|y)$, we can transform the problem into a penalized likelihood minimization problem:
-\begin{equation}
-    \hat{x}_{\text{MAP}} = \arg \min_{x} \left( -\log p(y|x) - \log p(x) \right)
-\end{equation}
-where $-\log p(y|x)$ is the data fidelity term and $-\log p(x)$ is the regularization term that encodes our prior knowledge on the image $x$.
-This prior can be expressed in the following exponential form :
-
-\begin{equation}
-    p(x) \propto e^{-\beta R(x)}
-\end{equation}
-where $R(x)$ is a regularization function and $\beta$ is a regularization parameter that controls the trade-off between data fidelity and regularization. The optimisation hence becomes:
-
-\begin{align}
-    \hat{x}_{\text{MAP}} &= \arg \min_{x} \left( -\log p(y|x) + \beta R(x) \right) \\
-    &= \arg \min_{x} \left( \sum_{i=1}^{d} \left( (Ax)_i - y_i \log (Ax)_i\right) + \beta R(x) \right)
-    \label{eq:map_estimation}
-\end{align}
-
-The penalized likelihood approach allows us to incorporate various types of prior knowledge about the image, such as smoothness, sparsity, or anatomical information.
-The choice of the regularization function $R(x)$ must alleviate the ill-posedness of the reconstruction problem while preserving important features of the image, such as edges and textures.
-The following paragraph presents some commonly used regularization functions in PET image reconstruction.
-
-
-\subparagraph{Relative Difference penalty}
-
-The relative differences penalty is a concave prior that has been shown to be effective in PET imaging \cite{Nuyts2002}.
-
-\begin{equation}
-    \phi(x_j, x_k) = \frac{(x_j - x_k)^2}{x_j + x_k + \gamma |x_j - x_k|}
-\end{equation}
-where the $\gamma$ parameter controls which relative diferences are considered as large.
-
-
-This prior information can be used in a similar iterative algorithm as MLEM or OSEM. It is called the \textbf{Maximum A Posteriori Expectation-Maximization (MAPEM)} algorithm, and it consists in replacing the M-step of the MLEM algorithm with a step that takes into account the chosen prior $R(x)$ \cite{Green1990}.
-
-\begin{algorithm}
-\caption{Maximum A Posteriori Expectation-Maximization (MAPEM)}
-\begin{algorithmic}[1]
-\State \textbf{Input:} Measured data $y$, system matrix $A$, initial estimate $x^{(0)}$, regularization parameter $\beta$
-\State \textbf{Output:} Estimated image $x^{(k)}$
-\For{$k = 0$ to $K-1$}
-    \State \textbf{E-step:} Compute the expected number of counts
-    \begin{equation*}
-        \hat{y}_i^{(k)} = (Ax^{(k)})_i
-    \end{equation*}
-    \State \textbf{M-step:} Update the image estimate by minimizing the penalized likelihood function
-    \begin{equation*}
-        x_j^{(k+1)} = \frac{x_j^{(k)}}{\displaystyle \sum_{i=1}^{d} A_{ij} + \beta \left.\frac{\partial R(x)}{\partial x_j}\right|_{x=x^{(k)}}}  \sum_{i=1}^{d} A_{ij} \frac{y_i}{\hat{y}_i^{(k)}}
-    \end{equation*}
-\EndFor
-\State \textbf{Return} $x^{(K)}$
-\end{algorithmic}
-\label{alg:mapem}
-\end{algorithm}
+% \EndFor
+% \State \textbf{Return} $x^{(K)}$
+% \end{algorithmic}
+% \label{alg:mapem}
+% \end{algorithm}
