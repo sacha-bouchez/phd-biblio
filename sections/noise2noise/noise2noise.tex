@@ -1,166 +1,148 @@
 \chapter{Noise2Noise : a self-supervised framework}
 
+% \section{Self-supervised learning for denoising}
 
-In this section, we present several denoising methods for a certain signal $x$ corrupted by noise to produce a noisy observation $y$.
-Let $(\Omega, \mathcal{F}, \mathbb{P})$ be a probability space.
-Let $X : \Omega \to \mathbb{R}^n$ and $Y : \Omega \to \mathbb{R}^n$ be random variables representing respectively the clean signal and the noisy observation.
-We consider a corruption process $\mathcal{C}$ that maps the clean signal $X$ to the noisy observation $Y$ according to a certain noise model. This corruption process can be expressed as follows :
+% \subsection{Denoising Auto-Encoders}
 
-\begin{equation}
-    Y | X=x \sim \mathcal{C}(x)
-    \label{eq:noise-model}
-\end{equation}
+% Whereas traditional auto-encoders are trained to reconstruct their input through an encoder-decoder structure, Denoising auto-encoders (DAEs) are trained to reconstruct clean data from corrupted versions of it.
+% They have been first introduced by \cite{vincent_extracting_2008} and have since been widely used in various applications such as image denoising, inpainting or other inverse problems.
+% The DAE objective is thus :
 
-We will consider the residual additive noise $E$ defined as follows :
+% \begin{equation}
+%     \mathcal{L}_{DAE}(\theta) = \underset{\substack{X \sim p_X \\ Y | X=x \sim \mathcal{C}(x)}}{\mathbb{E}} \left[ \| X - f_{\theta}(Y) \|_2^2 \right]
+% \end{equation}
+% with $\mathcal{C}$ being a random corruption process.
 
-\begin{equation}
-    E = Y - X
-\end{equation}
-
-\section{Self-supervised learning for denoising}
-
-\subsection{Denoising Auto-Encoders}
-
-Whereas traditional auto-encoders are trained to reconstruct their input through an encoder-decoder structure, Denoising auto-encoders (DAEs) are trained to reconstruct clean data from corrupted versions of it.
-They have been first introduced by \cite{vincent_extracting_2008} and have since been widely used in various applications such as image denoising, inpainting or other inverse problems.
-The DAE objective is thus :
-
-\begin{equation}
-    \mathcal{L}_{DAE}(\theta) = \underset{\substack{X \sim p_X \\ Y | X=x \sim \mathcal{C}(x)}}{\mathbb{E}} \left[ \| X - f_{\theta}(Y) \|_2^2 \right]
-\end{equation}
-with $\mathcal{C}$ being a random corruption process.
-
-\subsection{Score-based denoising}
+% \subsection{Score-based denoising}
 
 
-\begin{definition}{Score function}
-    % The score function of a random variable $X$ with $\mathcal{C}^1$ probability density function $p(x)$ is defined as the gradient of the log-density with respect to $x$ :
-    \begin{equation}
-        s_X(x) = \nabla_x \ln p(x)
-    \end{equation}
-\end{definition}
+% \begin{definition}{Score function}
+%     % The score function of a random variable $X$ with $\mathcal{C}^1$ probability density function $p(x)$ is defined as the gradient of the log-density with respect to $x$ :
+%     \begin{equation}
+%         s_X(x) = \nabla_x \ln p(x)
+%     \end{equation}
+% \end{definition}
 
-This function denotes the direction of maximum increase of the probability density function at point $x$.
+% This function denotes the direction of maximum increase of the probability density function at point $x$.
 
-\subsubsection{Score matching estimation}
+% \subsubsection{Score matching estimation}
 
-As first introduced by \cite{hyvarinen_estimation_2005}, score matching is a method to estimate parametric models of probability density functions without requiring the computation of the normalizing constant.
-Given a parametric model score function $s(\cdot; \theta)$ with parameter $\theta$, and the data score function $s_X(\cdot)$ of observed data sampled from $X$, we want to minimize the distance between the data score function $s_X(\cdot)$ and the model score function $s_X(\cdot; \theta)$ using the following objective :
+% As first introduced by \cite{hyvarinen_estimation_2005}, score matching is a method to estimate parametric models of probability density functions without requiring the computation of the normalizing constant.
+% Given a parametric model score function $s(\cdot; \theta)$ with parameter $\theta$, and the data score function $s_X(\cdot)$ of observed data sampled from $X$, we want to minimize the distance between the data score function $s_X(\cdot)$ and the model score function $s_X(\cdot; \theta)$ using the following objective :
 
-\begin{equation}
-    \mathcal{L}_{SM}(\theta) = \mathbb{E}_X \left[ \| s_X(x) - s(x; \theta) \|_2^2 \right]
-\end{equation}
+% \begin{equation}
+%     \mathcal{L}_{SM}(\theta) = \mathbb{E}_X \left[ \| s_X(x) - s(x; \theta) \|_2^2 \right]
+% \end{equation}
 
-Minimization of this objective does not require knowledge of the normalizing constant of $s(\cdot; \theta)$ as it only involves derivatives of the log-density.
-They also show that we don't need to know the data score function $s_X(x)$ to optimize this objective as it can be rewritten as :
+% Minimization of this objective does not require knowledge of the normalizing constant of $s(\cdot; \theta)$ as it only involves derivatives of the log-density.
+% They also show that we don't need to know the data score function $s_X(x)$ to optimize this objective as it can be rewritten as :
 
-\begin{equation}
-    \mathcal{L}_{SM}(\theta) = \mathbb{E}_X \left[ \mathop{Tr} \left( \nabla_x s(x; \theta) \right) + \frac{1}{2} \| s_X(x; \theta) \|_2^2 \right] + C
-\end{equation}
+% \begin{equation}
+%     \mathcal{L}_{SM}(\theta) = \mathbb{E}_X \left[ \mathop{Tr} \left( \nabla_x s(x; \theta) \right) + \frac{1}{2} \| s_X(x; \theta) \|_2^2 \right] + C
+% \end{equation}
 
-This is very convenient as it avoids the need to estimate the data score function over the observed data, which is generally intractable.
+% This is very convenient as it avoids the need to estimate the data score function over the observed data, which is generally intractable.
 
-\subsubsection{Denoising Auto-Encoders and score function estimation}
+% \subsubsection{Denoising Auto-Encoders and score function estimation}
 
 
 
 
-DAEs and score matching principles have been linked together by \cite{vincent_connection_2011}. They built an objective similar to score matching but defined on clean/noisy image pairs with the corruption process $\mathcal{C}$ distribution being known.
+% DAEs and score matching principles have been linked together by \cite{vincent_connection_2011}. They built an objective similar to score matching but defined on clean/noisy image pairs with the corruption process $\mathcal{C}$ distribution being known.
 
-\begin{equation}
-    \mathcal{L}_{DSM}(\theta) = \underset{X \sim p_X \\ Y \sim \mathcal{C}(X)}{\mathbb{E}} \left[ \| s_X(Y, \theta) - s_{Y|X}(Y|X) \|_2^2 \right]
-\end{equation}
+% \begin{equation}
+%     \mathcal{L}_{DSM}(\theta) = \underset{X \sim p_X \\ Y \sim \mathcal{C}(X)}{\mathbb{E}} \left[ \| s_X(Y, \theta) - s_{Y|X}(Y|X) \|_2^2 \right]
+% \end{equation}
 
-They prove the specific case of Tweedie's formula for additive Gaussian noise (see Theorem \ref{theorem:tweedie_Gaussian}) which will be considered in the following.
+% They prove the specific case of Tweedie's formula for additive Gaussian noise (see Theorem \ref{theorem:tweedie_Gaussian}) which will be considered in the following.
 
-\cite{alain_what_2014} further prove that when the Gaussian noise level $\sigma$ tends to zero, the DAE learns the score of the data distribution as follows :
+% \cite{alain_what_2014} further prove that when the Gaussian noise level $\sigma$ tends to zero, the DAE learns the score of the data distribution as follows :
 
-\begin{equation}
-    f_{\theta^*}(y) = y + \sigma^2 s_X(y) + \underset{\sigma \to 0}{o}(\sigma^2)
-\end{equation}
+% \begin{equation}
+%     f_{\theta^*}(y) = y + \sigma^2 s_X(y) + \underset{\sigma \to 0}{o}(\sigma^2)
+% \end{equation}
 
-This can be generalized to a wider range of exponential family distributions thanks to Tweedie's formula \cite{efron_tweedies_2011}. We retain the two following theorems that stand for additive Gaussian noise and Poisson noise respectively.
+% This can be generalized to a wider range of exponential family distributions thanks to Tweedie's formula \cite{efron_tweedies_2011}. We retain the two following theorems that stand for additive Gaussian noise and Poisson noise respectively.
 
-\begin{theorem}{Tweedie's formula for additive Gaussian noise}
-    \label{theorem:tweedie_Gaussian}
-    Let $X$ be a random variable and $Y = X + N$ be a noisy observation of $X$ corrupted by an additive Gaussian noise $N$ independent from $X$ with variance $\sigma^2$. The MMSE estimator of $X$ given $Y = y$ is given by :
-    \begin{equation}
-        \mathbb{E}\left[X | Y = y\right] = y + \sigma^2 \nabla_y \ln p(y)
-    \end{equation}
-\end{theorem}
+% \begin{theorem}{Tweedie's formula for additive Gaussian noise}
+%     \label{theorem:tweedie_Gaussian}
+%     Let $X$ be a random variable and $Y = X + N$ be a noisy observation of $X$ corrupted by an additive Gaussian noise $N$ independent from $X$ with variance $\sigma^2$. The MMSE estimator of $X$ given $Y = y$ is given by :
+%     \begin{equation}
+%         \mathbb{E}\left[X | Y = y\right] = y + \sigma^2 \nabla_y \ln p(y)
+%     \end{equation}
+% \end{theorem}
 
-% \begin{proof}
-%     Bayes' rule gives us:
-%     \begin{equation*}
-%         p(x|y) = \frac{p(y|x)p(x)}{p(y)}
-%     \end{equation*}
-%     The likelihood $p(y|x)$ is given by the noise distribution:
-%     \begin{equation*}
-%         p(y|x) = \frac{1}{\sqrt{2 \pi \sigma^2}} \exp\left(-\frac{||y - x||^2}{2 \sigma^2}\right)
-%     \end{equation*}
-%     Thus we have:
-%     \begin{equation*}
-%         p(x|y) = \frac{1}{Z(y)} \exp\left(-\frac{||y - x||^2}{2 \sigma^2}\right) p(x)
-%     \end{equation*}
-%     with $Z(y)$ acting as a normalizing constant:
-%     \begin{equation*}
-%         Z(y) = \int p(x) \exp\left(-\frac{||y - x||^2}{2 \sigma^2}\right)dx
-%     \end{equation*}
-%     Then we compute the derivative of $p(y)$:
-%     \begin{align*}
-%         \nabla_y p(y) &= \frac{d}{dy} \int p(y|x)p(x) dx \\
-%         &= \int \frac{\partial}{\partial y} p(x) \exp\left(-\frac{||y - x||^2}{2 \sigma^2}\right) dx \\
-%         &= - \frac{1}{\sigma^2} \int (y - x) p(x) \phi_{\sigma}(y - x) dx \\
-%     \end{align*}
-%     where we denote $\phi_{\sigma}$ the Gaussian kernel of standard deviation $\sigma$.
+% % \begin{proof}
+% %     Bayes' rule gives us:
+% %     \begin{equation*}
+% %         p(x|y) = \frac{p(y|x)p(x)}{p(y)}
+% %     \end{equation*}
+% %     The likelihood $p(y|x)$ is given by the noise distribution:
+% %     \begin{equation*}
+% %         p(y|x) = \frac{1}{\sqrt{2 \pi \sigma^2}} \exp\left(-\frac{||y - x||^2}{2 \sigma^2}\right)
+% %     \end{equation*}
+% %     Thus we have:
+% %     \begin{equation*}
+% %         p(x|y) = \frac{1}{Z(y)} \exp\left(-\frac{||y - x||^2}{2 \sigma^2}\right) p(x)
+% %     \end{equation*}
+% %     with $Z(y)$ acting as a normalizing constant:
+% %     \begin{equation*}
+% %         Z(y) = \int p(x) \exp\left(-\frac{||y - x||^2}{2 \sigma^2}\right)dx
+% %     \end{equation*}
+% %     Then we compute the derivative of $p(y)$:
+% %     \begin{align*}
+% %         \nabla_y p(y) &= \frac{d}{dy} \int p(y|x)p(x) dx \\
+% %         &= \int \frac{\partial}{\partial y} p(x) \exp\left(-\frac{||y - x||^2}{2 \sigma^2}\right) dx \\
+% %         &= - \frac{1}{\sigma^2} \int (y - x) p(x) \phi_{\sigma}(y - x) dx \\
+% %     \end{align*}
+% %     where we denote $\phi_{\sigma}$ the Gaussian kernel of standard deviation $\sigma$.
 
-%     \begin{align*}
-%         \nabla_y \ln p(y) = \frac{p'(y)}{p(y)} &= - \frac{1}{\sigma^2} \left( \int (y - x) \frac{p(x) \phi_{\sigma}(y - x)}{p(y)} dx \right) \\
-%         &= - \frac{1}{\sigma^2} \left( y - \int x p(x|y) dx \right) \\
-%         &= - \frac{1}{\sigma^2} (y - \mathbb{E}[x|y])
-%     \end{align*}
-% \end{proof}
+% %     \begin{align*}
+% %         \nabla_y \ln p(y) = \frac{p'(y)}{p(y)} &= - \frac{1}{\sigma^2} \left( \int (y - x) \frac{p(x) \phi_{\sigma}(y - x)}{p(y)} dx \right) \\
+% %         &= - \frac{1}{\sigma^2} \left( y - \int x p(x|y) dx \right) \\
+% %         &= - \frac{1}{\sigma^2} (y - \mathbb{E}[x|y])
+% %     \end{align*}
+% % \end{proof}
 
-\begin{theorem}{Tweedie's formula for Poisson noise}
-    Let $X$ be a random variable and $Y$ be a noisy observation of $X$ corrupted by Poisson noise. The MMSE estimator of $X$ given $Y = y$ is given by :
-    \begin{equation}
-        \mathbb{E}\left[X | Y = y\right] = (y + 1)\exp \left( \nabla_y \ln p(y)\right)
-    \end{equation}
-\end{theorem}
+% \begin{theorem}{Tweedie's formula for Poisson noise}
+%     Let $X$ be a random variable and $Y$ be a noisy observation of $X$ corrupted by Poisson noise. The MMSE estimator of $X$ given $Y = y$ is given by :
+%     \begin{equation}
+%         \mathbb{E}\left[X | Y = y\right] = (y + 1)\exp \left( \nabla_y \ln p(y)\right)
+%     \end{equation}
+% \end{theorem}
 
-% \begin{proof}
-%     The assumption of Poisson noise means that the likelihood $p(y|x)$ is given by:
-%     \begin{equation*}
-%         p(y|x) = \frac{(x)^{y} e^{-x}}{y!}
-%     \end{equation*}
-%     Then we compute the gradient of $p(y)$:
-%     \begin{align*}
-%         \exp(\ln \nabla_y p(y)) &= \frac{p(y+1)}{p(y)} \\
-%         &= \frac{1}{p(y)} \int p(x) \frac{x}{y+1}\frac{x^y}{y!}e^{-x} dx \\
-%         &= \frac{1}{y+1} \int x \frac{p(x) p(y|x)}{p(y)} dx \\
-%         &= \frac{1}{y+1} \mathbb{E}[x|y]
-%     \end{align*}
-%     Thus we have:
-%     \begin{equation*}
-%         \mathbb{E}[x|y] = (y+1) \exp(\ln \nabla_y p(y))
-%     \end{equation*}
-% \end{proof}
+% % \begin{proof}
+% %     The assumption of Poisson noise means that the likelihood $p(y|x)$ is given by:
+% %     \begin{equation*}
+% %         p(y|x) = \frac{(x)^{y} e^{-x}}{y!}
+% %     \end{equation*}
+% %     Then we compute the gradient of $p(y)$:
+% %     \begin{align*}
+% %         \exp(\ln \nabla_y p(y)) &= \frac{p(y+1)}{p(y)} \\
+% %         &= \frac{1}{p(y)} \int p(x) \frac{x}{y+1}\frac{x^y}{y!}e^{-x} dx \\
+% %         &= \frac{1}{y+1} \int x \frac{p(x) p(y|x)}{p(y)} dx \\
+% %         &= \frac{1}{y+1} \mathbb{E}[x|y]
+% %     \end{align*}
+% %     Thus we have:
+% %     \begin{equation*}
+% %         \mathbb{E}[x|y] = (y+1) \exp(\ln \nabla_y p(y))
+% %     \end{equation*}
+% % \end{proof}
 
 
-Given the previous proposition and theorems, one can build a link between denoising auto-encoders and score function estimation as follows :
+% Given the previous proposition and theorems, one can build a link between denoising auto-encoders and score function estimation as follows :
 
-\begin{equation}
-    s_Y(y) = \frac{D_{\sigma}(y) - y}{\sigma^2} \quad \text{(Gaussian noise)}
-\end{equation}
-\begin{equation}
-    s_Y(y) = \ln \left( \frac{D_{Poisson}(y)}{y + 1} \right) \quad \text{(Poisson noise)}
-\end{equation}
+% \begin{equation}
+%     s_Y(y) = \frac{D_{\sigma}(y) - y}{\sigma^2} \quad \text{(Gaussian noise)}
+% \end{equation}
+% \begin{equation}
+%     s_Y(y) = \ln \left( \frac{D_{Poisson}(y)}{y + 1} \right) \quad \text{(Poisson noise)}
+% \end{equation}
 
-We can highlight an intriguing application of \cite{kim_noise2score_nodate} who leverage this link to estimate the score function using a DAE trained under an additive Gaussian noise assumption, even when the actual noise model is not Gaussian. They then use the estimated score function to denoise images corrupted by other types of noise using the appropriate variant of Tweedie's formula.
+% We can highlight an intriguing application of \cite{kim_noise2score_nodate} who leverage this link to estimate the score function using a DAE trained under an additive Gaussian noise assumption, even when the actual noise model is not Gaussian. They then use the estimated score function to denoise images corrupted by other types of noise using the appropriate variant of Tweedie's formula.
 
-\subsection{Stein's Unbiased Risk Estimator}
+% \subsection{Stein's Unbiased Risk Estimator}
 
-\newpage
 \section{The Noise2Noise framework}
 
 A seminal work in the denoising field is the \textbf{Noise2Noise} framework \cite{lehtinen_noise2noise_2018}.
@@ -169,45 +151,45 @@ The key idea of Noise2Noise is that we learn to denoise images from pairs of noi
 These pairs of noisy images can be obtained in various ways depending on the application. Each pair must represent the same underlying clean image but with different realizations of the noise process.
 Hence, we use the information contained in the noisy data itself to learn how to denoise it, without ever observing clean images.
 
-Noise2noise can be extended to the case of linear inverse problems in a more generic setting. We will present this extension in the last part of this section. As a consequence, we will use the formalism of
-\eqref{eq:inverse-problem} to present the Noise2Noise framework and its theoretical guarantees.
-
-Let's first consider the most basic case of pure denoising, i.e. when $A = I$ in \eqref{eq:inverse-problem}.
-Let $Y^{(1)}$ and $Y^{(2)}$ be two noisy observations of the same underlying clean image $X$ obtained through the same corruption process $\mathcal{C}$ but with different realizations of the noise.
-Thus, the noisy pairs are generated according to the following noise model :
-
+We will use the formalism of \eqref{eq:inverse-problem} to present the Noise2Noise framework and its theoretical guarantees.
+Hence, we keep the notations of the inverse problem formalism and we denote as $A \in \mathcal{L}(\mathcal{X}, \mathcal{Y})$ the forward operator of the inverse problem.
+Let $X: \Omega \to \mathcal{X}$ be a random variable representing the clean image and $Y: \Omega \to \mathcal{Y}$ be a random variable representing the noisy observation of $X$:
 \begin{equation}
-    Y^{(j)} | X \sim \mathcal{C}(X), \quad j = 1, 2
-    \label{eq:additive_noise}
+    Y | X=x \sim \mathcal{C}(Ax)
+    \label{eq:noise-model}
 \end{equation}
 
-Let $\{(Y_i^{(1)}, Y_i^{(2)})\}_{i=1}^N$ be a finite sequence of independant and statistically distributed random variables.
-We denote as $y_i^{(j)}$ the observed noisy images for $j = 1, 2$ and $i = 1, \dots, N$.
-We train a neural network $f_\theta$ with parameters $\theta$ to map the noisy image $y_i^{(1)}$ to the other noisy image $y_i^{(2)}$ both representing a different corruption of the same underlying clean image $x_i$ and vice versa by minimizing the following loss function :
+Let $\{X_i\}_{i=1}^N$ be a finite sequence of independant and identically distributed random variables with the same probability law as $X$.
+For each $i = 1, \dots, N$, we define two independant and identically distributed random variables $Y_i^{(1)}$ and $Y_i^{(2)}$ representing two noisy measurements of $X_i$:
 \begin{equation}
-    \mathcal{L}_{\text{N2N}}(\theta) = \frac{1}{2N} \sum_{i=1}^N \left[ \rho(f_\theta(y_i^{(1)}), y_i^{(2)}) + \rho(f_\theta(y_i^{(2)}), y_i^{(1)}) \right]
+    \begin{cases}
+        x_i \in \mathcal{X} \\
+        Y_i^{(j)} \sim \mathcal{C}(Ax_i), \quad j = 1, 2 \\
+        Y_i^{(1)} \independent Y_i^{(2)}
+    \end{cases}
+\end{equation}
+We train a neural network $f_\theta: \mathcal{Y} \to \mathcal{X}$ with parameters $\theta$ to map a noisy measurement $y_i^{(1)} \in \mathcal{Y}$ to another noisy measurement $y_i^{(2)} \in \mathcal{Y}$ representing a different realization of the same underlying clean image $x_i$ and vice versa using the following loss function:
+\begin{equation}
+    \mathcal{L}_{\text{N2N}}(\theta) = \frac{1}{2N} \sum_{i=1}^N \left[ \rho(Af_\theta(y_i^{(1)}), y_i^{(2)}) + \rho(Af_\theta(y_i^{(2)}), y_i^{(1)}) \right]
     \label{eq:n2n_loss}
 \end{equation}
 with $\rho$ a loss function such as the Mean Squared Error (MSE), the Mean Absolute Error (MAE) or any other appropriate loss.
 The supervised counterparts of \eqref{eq:n2n_loss} would be :
 \begin{equation}
-    \mathcal{L}_{\text{clean}}(\theta) = \frac{1}{N} \sum_{i=1}^N \rho(f_\theta(y_i), x_i) 
+    \mathcal{L}_{\text{clean}}(\theta) = \frac{1}{N} \sum_{i=1}^N \rho(Af_\theta(y_i), Ax_i) 
     \label{eq:supervised_loss}
 \end{equation}
-with $y_i$ being a noisy observation of the clean image $x_i$.
 
 One can have the intuition that the loss \eqref{eq:n2n_loss} is not equivalent to the supervised loss \eqref{eq:supervised_loss} as we do not have access to the clean image $x_i$.
 Intuitively, a Noise2Noise-trained model will learn to push a sample toward the mean of the distribution of the noisy samples as illustrated in Figure \ref{fig:noise2noise}.
-More rigorously, Definition \ref{def:n2n_compatible} formalizes the notion of Noise2Noise-compatible loss function and corruption process, which is a necessary condition for the Noise2Noise framework to be equivalent to the supervised learning framework.
+More rigorously, Definition \ref{def:n2n_compatible} formalizes the notion of Noise2Noise compatibility for a given loss function $\rho$ and a given noise model $\mathcal{C}$.
 \begin{definition}{Noise2Noise property}
     \label{def:n2n_compatible}
-    Let $(\rho, \mathcal{C})$ be a couple of loss function and corruption process.
-    The Noise2Noise framework is equivalent to its supervised counterpart under some conditions on $(\rho, \mathcal{C})$ which satisfies the \ref{eq:n2n_compatible} Property if
-    the minimization of \eqref{eq:n2n_loss} gives the same estimator as the minimization of \eqref{eq:supervised_loss} as $N \to \infty$ :
+    A couple of loss function and corruption process $(\rho, \mathcal{C})$ is said to be \textbf{Noise2Noise compatible} if the minimization of the Noise2Noise loss \eqref{eq:n2n_loss} gives the same estimator as the minimization of the supervised loss \eqref{eq:supervised_loss} as $N \to \infty$.
     \begin{equation}
         \label{eq:n2n_compatible}
         \tag{N2N}
-        \argmin_\theta \mathbb{E}_{Y^{(1)}, Y^{(2)}}[\rho(f_\theta(Y^{(1)}), Y^{(2)})] = \argmin_\theta \mathbb{E}_{Y, X}[\rho(f_\theta(Y), X)]
+        \argmin_\theta \mathbb{E}_{Y^{(1)}, Y^{(2)}}[\rho(Af_\theta(Y^{(1)}), Y^{(2)})] = \argmin_\theta \mathbb{E}_{Y, X}[\rho(Af_\theta(Y), AX)]
     \end{equation}
 \end{definition}
 \begin{figure}
@@ -232,6 +214,14 @@ More rigorously, Definition \ref{def:n2n_compatible} formalizes the notion of No
     \label{fig:noise2noise}
 \end{figure}
 
+\begin{remark}
+    Note that this formalism is adapted to general inverse problems but the case of pure denoising can be obtained by setting $A = I$.
+\end{remark}
+
+
+
+% TODO update notations with \Lambda
+
 \subsection{Theoretical guarantees of Noise2Noise}
 
 \paragraph{MSE loss case}
@@ -243,7 +233,7 @@ The Minimum Squared Error (MSE) loss function is a very common choice for denois
 \noindent We show here that the MSE loss function has interesting properties regarding Noise2Noise.
 
 \begin{definition}
-    We say that a noise model is centered if the expected value of the noisy observation $Y$ given the clean image $X=x$ is equal to $x$, i.e. $\mathbb{E}[Y | X=x] = x$.
+    The noise model $\mathcal{C}$ is said to be centered if the expected value of the noisy observation $Y$ given the clean image $X=x$ is equal to $Ax$, i.e. $\mathbb{E}[Y | X=x] = Ax$.
 \end{definition}
 
 \begin{proposition}
@@ -254,13 +244,20 @@ The Minimum Squared Error (MSE) loss function is a very common choice for denois
 \begin{proof}
     We expand the Noise2Noise empirical risk as follows :
     \begin{align*}
-        R_{N, 1}^{N2N}(\theta) &= \frac{1}{N} \sum_{i=1}^N \left[ \| f_\theta(Y_i^{(1)}) - Y_i^{(2)} \|_2^2 \right] \\
-        &= \frac{1}{N} \sum_{i=1}^N \left[ \| f_\theta(Y_i^{(1)}) - X + (X - Y_i^{(2)}) \|_2^2 \right] \\
-        &= R_{N, 1}^{clean}(\theta) + \frac{1}{N} \sum_{i=1}^N \left[ \| X - Y_i^{(2)} \|_2^2 \right] + \frac{2}{N} \sum_{i=1}^N \left[ (f_\theta(Y_i^{(1)}) - X)^T (X - Y_i^{(2)}) \right]
+        R_{N, 1}^{N2N}(\theta) &= \frac{1}{N} \sum_{i=1}^N \left[ \| Af_\theta(Y_i^{(1)}) - Y_i^{(2)} \|_2^2 \right] \\
+        &= \frac{1}{N} \sum_{i=1}^N \left[ \| Af_\theta(Y_i^{(1)}) - AX + (AX - Y_i^{(2)}) \|_2^2 \right] \\
+        &= R_{N, 1}^{clean}(\theta) + \frac{1}{N} \sum_{i=1}^N \left[ \| AX - Y_i^{(2)} \|_2^2 \right] + \frac{2}{N} \sum_{i=1}^N \left[ (Af_\theta(Y_i^{(1)}) - AX)^T (AX - Y_i^{(2)}) \right]
     \end{align*}
-    However, $\frac{2}{N} \sum_{i=1}^N \left[ (f_\theta(Y_i^{(1)}) - X)^T (X - Y_i^{(2)}) \right] \xrightarrow[N \to \infty]{a.s.} 2 \mathbb{E} \left[ (f_\theta(Y^{(1)}) - X)^T (X - Y^{(2)}) \right]$ by the law of large numbers. This expectation vanishes under the independence assumptions :
+    However, $\frac{2}{N} \sum_{i=1}^N \left[ (Af_\theta(Y_i^{(1)}) - AX)^T (AX - Y_i^{(2)}) \right] \xrightarrow[N \to \infty]{a.s.} 2 \mathbb{E} \left[ (Af_\theta(Y^{(1)}) - AX)^T (AX - Y^{(2)}) \right]$ by the law of large numbers.
+    \begin{align*}
+        &\mathbb{E}_{X, Y^{(1)}, Y^{(2)}} \left[ (Af_\theta(Y^{(1)}) - AX)^T (AX - Y^{(2)}) \right] \\
+        &= \mathbb{E}_{X} \left[ \mathbb{E}_{Y^{(1)}, Y^{(2)}} \left[ (Af_\theta(Y^{(1)}) - Ax)^T (Ax - Y^{(2)}) | X=x \right] \right] \\
+        &= \mathbb{E}_{X} \left[ \mathbb{E}_{Y^{(1)}} \left[ (Af_\theta(Y^{(1)}) - Ax | X=x)\right]^T \mathbb{E}_{Y^{(2)}} \left[ (Ax - Y^{(2)}) | X=x \right] \right] && \text{(independance)} \\
+        &= 0 && \text{(centered noise)}
+    \end{align*}
+    Thus, we have the following almost sure convergence :
     \begin{equation*}
-        R_{N, 1}^{N2N}(\theta) = R_{N, 1}^{clean}(\theta) + \mathbb{E} \left[ \| X - Y^{(2)} \|_2^2 \right] + o(1)
+        R_{N, 1}^{N2N}(\theta) = R_{N, 1}^{clean}(\theta) + \mathbb{E} \left[ \| X - Y^{(2)} \|_2^2 \right] + \underset{\text{a.s.}}{o}(1)
     \end{equation*}
     the second term being an irreductible variance term independant of $\theta$.
 \end{proof}
@@ -271,73 +268,69 @@ The use of the MSE loss function enables the use of an even more suited training
 The two independant noisy observations may be obtained by splitting the data into two
 different subsets, hence the noise in each subset is higher than the noise in the original data.
 This is the case for example in the medical field.
-\cite{wu19} propose a consensus loss to alleviate this issue and improve the results of the aggregated outputs 
+\cite{wu19} propose a consensus loss to alleviate this issue and improve the results of the aggregated outputs. In our generic framework for inverse problems, we can define the aggregated output of the two independant noisy observations as follows :
 \begin{equation}
-    \hat{y_i} = \frac{1}{2}(f_\theta(y_i^{(1)}) + f_\theta(y_i^{(2)}))
+    A\hat{x_i} = \frac{A}{2}(f_\theta(y_i^{(1)}) + f_\theta(y_i^{(2)}))
 \end{equation}
-
+with $y_i^{(1)} \in \mathcal{Y}$ and $y_i^{(2)} \in \mathcal{Y}$ being two independant noisy observations of the same underlying clean image $x_i \in \mathcal{X}$.
 We start by stating that the supervised loss of the aggregated output can be written as follows :
-
 \begin{align*}
-    \mathcal{L}_{\text{clean}}(\theta) &= \frac{1}{N} \sum_{i=1}^N \| \frac{1}{2}(f_\theta(y_i^{(1)}) + f_\theta(y_i^{(2)})) -  x_i \|_2^2 \\
-    &= \frac{1}{N} \sum_{i=1}^N \frac{1}{2} \| f_{\theta}(y_i^{(1)}) - x_i \|_2^2 + \frac{1}{2} \| f_{\theta}(y_i^{(2)}) - x_i \|_2^2 - \frac{1}{4} \| f_{\theta}(y_i^{(1)}) - f_{\theta}(y_i^{(2)}) \|_2^2
+    \mathcal{L}_{\text{clean}}(\theta) &= \frac{1}{N} \sum_{i=1}^N \| \frac{1}{2}(Af_\theta(y_i^{(1)}) + Af_\theta(y_i^{(2)})) -  Ax_i \|_2^2 \\
+    &= \frac{1}{N} \sum_{i=1}^N \frac{1}{2} \| Af_{\theta}(y_i^{(1)}) - Ax_i \|_2^2 + \frac{1}{2} \| Af_{\theta}(y_i^{(2)}) - Ax_i \|_2^2 - \frac{1}{4} \| Af_{\theta}(y_i^{(1)}) - Af_{\theta}(y_i^{(2)}) \|_2^2
 \end{align*}
-
 Theorem \ref{prop:noise2noise_l2} shows that the the unobserved clean image $x_i$ can be replaced by one of its noisy version $y_i^{(j)}$ in the previous expression without changing the optimal solution of the problem.
 Thus, we can rewrite the supervised loss of the aggregated output as follows :
-
 \begin{equation}
-    \mathcal{L}_{\text{consensus}}(\theta) = \frac{1}{N} \sum_{i=1}^N \frac{1}{2} \| f_{\theta}(y_i^{(1)}) - y_i^{(2)} \|_2^2 + \frac{1}{2} \| f_{\theta}(y_i^{(2)}) - y_i^{(1)} \|_2^2 - \frac{1}{4} \| f_{\theta}(y_i^{(1)}) - f_{\theta}(y_i^{(2)}) \|_2^2
+    \mathcal{L}_{\text{consensus}}(\theta) = \frac{1}{N} \sum_{i=1}^N \frac{1}{2} \| Af_{\theta}(y_i^{(1)}) - y_i^{(2)} \|_2^2 + \frac{1}{2} \| Af_{\theta}(y_i^{(2)}) - y_i^{(1)} \|_2^2 - \frac{1}{4} \| Af_{\theta}(y_i^{(1)}) - Af_{\theta}(y_i^{(2)}) \|_2^2
     \label{eq:consensus_loss}
 \end{equation}
-
 \paragraph{Poisson negative log-likelihood case}
 \label{sec:noise2noise_poisson}
 
 As we have a strong interest in PET imaging, we will also focus on the case of Poisson noise which is the best model for PET data and other photon-limited imaging modalities.
 
 \begin{definition}
-    For two random variables $X: \Omega \to \mathcal{X}$ and $Y: \Omega \to \mathcal{Y}$, we say that $Y \,|\, X \sim \text{Poisson}(X)$ if :
+    For two random variables $\Lambda$ and $Y$, we say that $Y \,|\, \Lambda \sim \text{Poisson}(\Lambda)$ if :
     \begin{equation*}
-        \forall i = 1 \dots d, \quad \mathbb{P}(Y[i] = k \,|\, X[i] = x[i]) = \frac{(x[i])^k e^{-x[i]}}{k!}, \quad k \in \mathbb{N}
+        \forall i = 1 \dots d, \quad \mathbb{P}(Y[i] = k \,|\, \Lambda[i] = \lambda[i]) = \frac{(\lambda[i])^k e^{-\lambda[i]}}{k!}, \quad k \in \mathbb{N}
     \end{equation*}
 \end{definition}
 
 \begin{proposition}
-    Under the assumption $Y \,|\, X \sim \text{Poisson}(X)$, we have :
+    Under the assumption $Y \,|\, \Lambda \sim \text{Poisson}(\Lambda)$, we have :
     \begin{equation*}
-        \mathbb{E}[Y \,|\, X] = X
+        \mathbb{E}[Y \,|\, \Lambda] = \Lambda
     \end{equation*}
 \end{proposition}
 
 \begin{proof}
     By definition of the Poisson distribution, we have :
     \begin{align*}
-        \mathbb{E}[Y[i] \,|\, X[i] = x[i]] &= \sum_{k=0}^{\infty} k \cdot \mathbb{P}(Y[i] = k \,|\, X[i] = x[i]) \\
-        &= \sum_{k=0}^{\infty} k \cdot \frac{(x[i])^k e^{-x[i]}}{k!} \\
-        &= x[i] \sum_{k=1}^{\infty} \frac{(x[i])^{k-1} e^{-x[i]}}{(k-1)!} \\
-        &= x[i] \cdot 1 = x[i]
+        \mathbb{E}[Y[i] \,|\, \Lambda[i] = \lambda[i]] &= \sum_{k=0}^{\infty} k \cdot \mathbb{P}(Y[i] = k \,|\, \Lambda[i] = \lambda[i]) \\
+        &= \sum_{k=0}^{\infty} k \cdot \frac{(\lambda[i])^k e^{-\lambda[i]}}{k!} \\
+        &= \lambda[i] \sum_{k=1}^{\infty} \frac{(\lambda[i])^{k-1} e^{-\lambda[i]}}{(k-1)!} \\
+        &= \lambda[i] \cdot 1 = \lambda[i]
     \end{align*}
-    Thus, we have $\mathbb{E}[Y \,|\, X] = X$.
+    Thus, we have $\mathbb{E}[Y \,|\, \Lambda] = \Lambda$.
 \end{proof}
 
-Now, we consider the case of Poisson noise (i.e. $Y^{(j)} \,|\, X^{(j)} \sim \text{Poisson}(X^{(j)}), \quad j = 1, 2$).
+Now, we consider the case of Poisson noise (i.e. $Y^{(j)} \,|\, \Lambda^{(j)} \sim \text{Poisson}(\Lambda^{(j)}), \quad j = 1, 2$).
 Given a clean image $x$ and a noisy observation $y$ corrupted by Poisson noise, the likelihood of observing $y$ given $x$ is given by :
 \begin{equation*}
-    p(y|x) = \prod_{i} \frac{(x[i])^{y[i]} e^{-x[i]}}{y[i]!}
+    p(y|\lambda) = \prod_{i} \frac{(\lambda[i])^{y[i]} e^{-\lambda[i]}}{y[i]!}
 \end{equation*}
 Taking the negative logarithm of this likelihood gives us the Poisson negative log-likelihood loss as defined in the following definition.
 
 \begin{definition}
-    The Poisson negative log-likelihood loss between two images $y$ and $x$ is defined as follows :
+    The Poisson negative log-likelihood loss between two images $y$ and $\lambda$ is defined as follows :
     \begin{equation*}
-        \mathcal{L}_{Poisson}(y, x) = \sum_{i} \left[ y[i] - x[i] \log(y[i]) + \log(x[i]!) \right]
+        \mathcal{L}_{Poisson}(y, \lambda) = \sum_{i} \left[ y[i] - \lambda[i] \log(y[i]) + \log(\lambda[i]!) \right]
     \end{equation*}
 \end{definition}
 
 \begin{proposition}
     \label{prop:noise2noise_poisson}
-    If $Y^{(1)}$ and $Y^{(2)}$ are independent given the clean image $X$ (i.e. $Y^{(1)} | X \independent Y^{(2)} | X$), then $\rho = \mathcal{L}_{Poisson}$ associated with Poisson noise model ($Y | X=x \sim \text{Poisson}(x)$) satisfy the Noise2Noise property \eqref{eq:n2n_compatible}.
+    If $Y^{(1)}$ and $Y^{(2)}$ are independent given the clean image $X$ (i.e. $Y^{(1)} | X \independent Y^{(2)} | X$), then $\rho = \mathcal{L}_{Poisson}$ associated with Poisson noise model ($Y | X=x \sim \text{Poisson}(Ax)$) satisfy the Noise2Noise property \eqref{eq:n2n_compatible}.
 \end{proposition}
 
 \begin{proof}
@@ -347,20 +340,21 @@ Taking the negative logarithm of this likelihood gives us the Poisson negative l
     \end{equation*}
     We expand the Noise2Noise Poisson empirical risk as follows :
     \begin{align*}
-        R_{N,1}^{N2N}(\theta) &= \frac{1}{N} \sum_{i=1}^N \left[ \mathcal{L}_{Poisson}(f_\theta(Y_i^{(1)}), Y_i^{(2)}) \right] \\
-        &= \frac{1}{N} \sum_{i=1}^N \left[ f_\theta(Y_i^{(1)}) - Y_i^{(2)} \log(f_\theta(Y_i^{(1)})) + \log(Y_i^{(2)}!) \right]
+        R_{N,1}^{N2N}(\theta) &= \frac{1}{N} \sum_{i=1}^N \left[ \mathcal{L}_{Poisson}(Af_\theta(Y_i^{(1)}), Y_i^{(2)}) \right] \\
+        &= \frac{1}{N} \sum_{i=1}^N \left[ Af_\theta(Y_i^{(1)}) - Y_i^{(2)} \log(Af_\theta(Y_i^{(1)})) + \log(Y_i^{(2)}!) \right]
     \end{align*}
-    Yet, $\frac{1}{N} \sum_{i=1}^N Y_i^{(2)} \log(f_\theta(Y_i^{(1)})) \xrightarrow[N \to \infty]{a.s.} \mathbb{E} \left[ Y^{(2)} \log(f_\theta(Y^{(1)})) \right]$ due to the law of large numbers. Under the independence assumption on the noise, this expectation can be rewritten as 
+    Yet, $\frac{1}{N} \sum_{i=1}^N Y_i^{(2)} \log(Af_\theta(Y_i^{(1)})) \xrightarrow[N \to \infty]{a.s.} \mathbb{E} \left[ Y^{(2)} \log(Af_\theta(Y^{(1)})) \right]$ due to the law of large numbers. Under the independence assumption on the noise, this expectation can be rewritten as 
     \begin{align*}
-        \mathbb{E} \left[ Y^{(2)} | X \right] \mathbb{E} \left[ \log(f_\theta(Y^{(1)})) \right] = X \mathbb{E} \left[ \log(f_\theta(Y^{(1)})) \right]
+        % \mathbb{E} \left[ Y^{(2)} | X \right] \mathbb{E} \left[ \log(f_\theta(Y^{(1)})) \right] = AX \mathbb{E} \left[ \log(f_\theta(Y^{(1)})) \right]
+        \mathbb{E}_X \left[ \mathbb{E}_{Y^{(2)}} \left[ Y^{(2)} | X \right] \mathbb{E}_{Y^{(1)}} \left[ \log(Af_\theta(Y^{(1)})) | X \right] \right] = \mathbb{E}_X \left[ AX \mathbb{E}_{Y^{(1)}} \left[ \log(Af_\theta(Y^{(1)})) | X \right] \right]
     \end{align*}
     Then, the empirical risk satisfies the following almost sure convergence :
     \begin{align*}
-        R_{N,1}^{N2N}(\theta) \xrightarrow[N \to \infty]{a.s.} \mathbb{E} \left[ f_\theta(Y^{(1)}) - X \log(f_\theta(Y^{(1)})) + \log(Y^{(2)}!) \right]
+        R_{N,1}^{N2N}(\theta) \xrightarrow[N \to \infty]{a.s.} \mathbb{E} \left[ f_\theta(Y^{(1)}) - AX \log(f_\theta(Y^{(1)})) + \log(Y^{(2)}!) \right]
     \end{align*}
     We can do the same for the second term of the loss by swapping $Y^{(1)}$ and $Y^{(2)}$ and we get the following result :
     \begin{equation*}
-        R_{N}^{N2N}(\theta) \xrightarrow[N \to \infty]{a.s.} 2 \mathbb{E} \left[ f_\theta(Y) - X \log(f_\theta(Y)) + \log(Y!)\right]
+        R_{N}^{N2N}(\theta) \xrightarrow[N \to \infty]{a.s.} 2 \mathbb{E} \left[ f_\theta(Y) - AX \log(f_\theta(Y)) + \log(Y!)\right]
     \end{equation*}
     where we are left with the standard clean poisson negative-log likelihood risk plus a constant term independent of $\theta$.
 \end{proof}
@@ -374,60 +368,60 @@ The choice of the loss function $\rho$ is crucial to ensure those guarantees and
 \subsubsection{Noise-induced loss bias}
 
 \begin{definition}
-    We define the noise-induced loss bias as between two vectors $z$ and $x$ as the difference between the expected value of the loss function $\rho$ evaluated at $z$ and a noisy observation $Y$ and the actual distance between $z$ and $x$, i.e. :
+    We define the noise-induced loss bias as between two vectors $z$ and $Ax$ for a given image $x$ as the difference between the expected value of the loss function $\rho$ evaluated at $z$ and a noisy observation $Y$ and the actual distance between $z$ and $Ax$, i.e. :
     \begin{equation}
-        \Delta_\rho(z, x) = \mathbb{E}[\rho(z, Y) | X=x] - \rho(z, x)
+        \Delta_\rho(z, Ax) = \mathbb{E}[\rho(z, Y) | X=x] - \rho(z, Ax)
     \end{equation}
 \end{definition}
 
 We denote as $R^{\text{N2N}}(\theta)$ (resp. $R^{\text{clean}}(\theta)$) the expected value of the Noise2Noise loss (resp. the supervised loss) over the distribution of the noisy observations.
 
 \begin{equation}
-    R^{\text{N2N}}(\theta) = \mathbb{E}_{X, Y^{(1)}, Y^{(2)}}[\rho(f_\theta(Y^{(1)}), Y^{(2)})]
+    R^{\text{N2N}}(\theta) = \mathbb{E}_{X, Y^{(1)}, Y^{(2)}}[\rho(Af_\theta(Y^{(1)}), Y^{(2)})]
 \end{equation}
 
 \begin{equation}
-    R^{\text{clean}}(\theta) = \mathbb{E}_{X, Y}[\rho(f_\theta(Y), X)]
+    R^{\text{clean}}(\theta) = \mathbb{E}_{X, Y}[\rho(Af_\theta(Y), AX)]
 \end{equation}
 
 \begin{proposition}
     The Noise2Noise and the supervised expected risks are tied by the following relation :
     \begin{equation}
-        R^{\text{N2N}}(\theta) = R^{\text{clean}}(\theta) + \mathbb{E}[\Delta_\rho(f_\theta(Y), X)]
+        R^{\text{N2N}}(\theta) = R^{\text{clean}}(\theta) + \mathbb{E}[\Delta_\rho(Af_\theta(Y), AX)]
     \end{equation}
 \end{proposition}
 
 \begin{proof}
     We have :
     \begin{align*}
-        R^{\text{N2N}}(\theta) &= \mathbb{E}_{X, Y^{(1)}, Y^{(2)}}[\rho(f_\theta(Y^{(1)}), Y^{(2)})] \\
-        &= \mathbb{E}_{X, Y^{(1)}}[\mathbb{E}_{Y^{(2)}}[\rho(f_\theta(Y^{(1)}), Y^{(2)}) | X, Y^{(1)}]] \\
-        &= \mathbb{E}_{X, Y^{(1)}}[\mathbb{E}_{Y^{(2)}}[\rho(f_\theta(Y^{(1)}), Y^{(2)}) | X]]
+        R^{\text{N2N}}(\theta) &= \mathbb{E}_{X, Y^{(1)}, Y^{(2)}}[\rho(Af_\theta(Y^{(1)}), Y^{(2)})] \\
+        &= \mathbb{E}_{X, Y^{(1)}}[\mathbb{E}_{Y^{(2)}}[\rho(Af_\theta(Y^{(1)}), Y^{(2)}) | X, Y^{(1)}]] \\
+        &= \mathbb{E}_{X, Y^{(1)}}[\mathbb{E}_{Y^{(2)}}[\rho(Af_\theta(Y^{(1)}), Y^{(2)}) | X]]
     \end{align*}
-    Let $z = f_\theta(Y^{(1)})$, we have $\mathbb{E}_{Y^{(2)}}[\rho(z, Y^{(2)}) | X] = \rho(z, X) + \Delta_\rho(z, X)$ by definition of the noise-induced loss bias. Thus, we have :
+    Let $z = Af_\theta(Y^{(1)})$, we have $\mathbb{E}_{Y^{(2)}}[\rho(z, Y^{(2)}) | X] = \rho(z, AX) + \Delta_\rho(z, AX)$ by definition of the noise-induced loss bias. Thus, we have :
     \begin{align*}
-        R^{\text{N2N}}(\theta) &= \mathbb{E}_{X, Y^{(1)}}[\rho(f_\theta(Y^{(1)}), X) + \Delta_\rho(f_\theta(Y^{(1)}), X)] \\
-        &= R^{\text{clean}}(\theta) + \mathbb{E}[\Delta_\rho(f_\theta(Y), X)]
+        R^{\text{N2N}}(\theta) &= \mathbb{E}_{X, Y^{(1)}}[\rho(Af_\theta(Y^{(1)}), AX) + \Delta_\rho(Af_\theta(Y^{(1)}), AX)] \\
+        &= R^{\text{clean}}(\theta) + \mathbb{E}[\Delta_\rho(Af_\theta(Y), AX)]
     \end{align*}
 \end{proof}
 
-The $\mathbb{E}[\Delta_\rho(f_\theta(Y), X)]$ term is very informative regarding the effectiveness of the Noise2Noise framework for a given noise model and loss function.
+The $\mathbb{E}[\Delta_\rho(Af_\theta(Y), AX)]$ term is very informative regarding the effectiveness of the Noise2Noise framework for a given noise model and loss function.
 If this term is independent of the parameters $\theta$, then minimizing the Noise2Noise loss is equivalent to minimizing the supervised loss and we can learn to denoise without ever observing clean images.
 
 \begin{corollary}
     \label{coro:delta}
-    The Noise2Noise property \eqref{eq:n2n_compatible} is satisfied if and only if $\Delta_\rho(z, x)$ is independent of $z$.
+    The Noise2Noise property \eqref{eq:n2n_compatible} is satisfied if and only if $(z, Ax) \to \Delta_\rho(z, Ax)$ is independent of $z$.
 \end{corollary}
 
 We can give a new demonstration of Proposition \ref{prop:noise2noise_l2} using the noise-induced loss bias formalism with the MSE loss function :
 \begin{align*}
-    \Delta_\rho(z, x) &= \mathbb{E}[\| z - Y \|_2^2 | X=x] - \| z - x \|_2^2 \\
-    &= \mathbb{E}[\| z - x + (x - Y) \|_2^2 | X=x] - \| z - x \|_2^2 \\
-    &= \mathbb{E}[\| z - x \|_2^2 + \| x - Y \|_2^2 + 2 \langle z - x, x - Y \rangle | X=x] \\
-    &\quad - \| z - x \|_2^2 \\
-    &= \mathbb{E}[\| x - Y \|_2^2 | X=x] + 2 \langle z - x, \mathbb{E}[x - Y | X=x] \rangle
+    \Delta_\rho(z, Ax) &= \mathbb{E}[\| z - Y \|_2^2 | X=x] - \| z - Ax \|_2^2 \\
+    &= \mathbb{E}[\| z - Ax + (Ax - Y) \|_2^2 | X=x] - \| z - Ax \|_2^2 \\
+    &= \mathbb{E}[\| z - Ax \|_2^2 + \| Ax - Y \|_2^2 + 2 \langle z - Ax, Ax - Y \rangle | X=x] \\
+    &\quad - \| z - Ax \|_2^2 \\
+    &= \mathbb{E}[\| Ax - Y \|_2^2 | X=x] + 2 \langle z - Ax, \mathbb{E}[Ax - Y | X=x] \rangle
 \end{align*}
-\noindent According to corollary \ref{coro:delta}, we need this quantity to be independent of $z$. Thus, we need the term $\langle z - x, \mathbb{E}[x - Y | X=x] \rangle$ to vanish for all $z$, which is equivalent to having $\mathbb{E}[Y | X=x] = x$.
+\noindent According to corollary \ref{coro:delta}, we need this quantity to be independent of $z$. Thus, we need the term $\langle z - Ax, \mathbb{E}[Ax - Y | X=x] \rangle$ to vanish for all $z$, which is equivalent to having $\mathbb{E}[Y | X=x] = Ax$.
 
 In summary, we have proven that the Noise2Noise framework, combined with the use of the MSE loss function, is valid for any noise model as long as the noise is centered around its clean counterpart,
 in addition to the independence assumption between the two noisy observations given the clean image.
@@ -436,7 +430,7 @@ For example, if $Y|X=x$ follows a log-normal distribution, then $\mathbb{E}[Y|X=
 \subsubsection{Particular case of the MAE loss}
 
 The Minimum Absolute Error (MAE) loss function is defined as $\rho(z, y) = \| z - y \|_1$ is a special case or the Noise2Noise framework.
-Its noise-induced loss bias is given by $\Delta_\rho(z, x) = \mathbb{E}[\| z - Y \|_1 | X=x] - \| z - x \|_1$.
+Its noise-induced loss bias is given by $\Delta_\rho(z, Ax) = \mathbb{E}[\| z - Y \|_1 | X=x] - \| z - Ax \|_1$.
 If $g_x(z) = \mathbb{E}[\| z - Y \|_1 | X=x]$, then $g_x'(z) = 2 \mathbb{P}(Y \leq z | X=x) - 1 = 2 F_{Y|X=x}(z) - 1$ where $F_{Y|X=x}$ is the cumulative distribution function of $Y$ given $X=x$.
 In order to apply Corollary \ref{coro:delta}, we need $g_x'(z) = 0$ for all $z$, which is equivalent to having $F_{Y|X=x}(z) = 1/2$ for all $z$, which is impossible.
 Thus, the MAE loss function is not appropriate for the Noise2Noise framework ; whereas the supervised loss with the MAE loss function will converge to the conditional median of $Y$ given $X=x$, the Noise2Noise loss will not converge to any well-defined estimator.
@@ -449,9 +443,9 @@ We can show that this property can be extended under some asumptions to the expo
 \begin{definition}
     A distribution belongs to the exponential family if its probability density function can be written as :
     \begin{equation}
-        p(y|x) = h(y) \exp(\langle T(y), \eta(x) \rangle - \phi(x))
+        p(y|Ax) = h(y) \exp(\langle T(y), \eta(Ax) \rangle - \phi(Ax))
     \end{equation}
-    where $T(y)$ is the sufficient statistic, $\eta(x)$ is the natural parameter, $\phi(x)$ is the log-partition function and $h(y)$ is the base measure.
+    where $T(y)$ is the sufficient statistic, $\eta(Ax)$ is the natural parameter, $\phi(Ax)$ is the log-partition function and $h(y)$ is the base measure.
 \end{definition}
 Using the exponential family formalism, we can write the negative log-likelihood loss function as follows :
 \begin{equation}
@@ -459,23 +453,23 @@ Using the exponential family formalism, we can write the negative log-likelihood
 \end{equation}
 Then, computing the noise-induced loss bias gives us :
 \begin{align*}
-    \Delta_\rho(z, x) &= \mathbb{E}[\rho(z, Y) | X=x] - \rho(z, x) \\
-    &= \mathbb{E}[-\log h(Y) - \langle T(Y), \eta(z) \rangle + \phi(z) | X=x] - (-\log h(x) - \langle T(x), \eta(z) \rangle + \phi(z)) \\
-    &= \mathbb{E}[-\log h(Y) | X=x] + \log h(x) - \langle \mathbb{E}[T(Y) | X=x] - T(x), \eta(z) \rangle + \phi(z) - \phi(z) \\
-    &= \mathbb{E}[-\log h(Y) | X=x] + \log h(x) - \langle \mathbb{E}[T(Y) | X=x] - T(x), \eta(z) \rangle
+    \Delta_\rho(z, Ax) &= \mathbb{E}[\rho(z, Y) | X=x] - \rho(z, Ax) \\
+    &= \mathbb{E}[-\log h(Y) - \langle T(Y), \eta(z) \rangle + \phi(z) | X=x] - (-\log h(Ax) - \langle T(Ax), \eta(z) \rangle + \phi(Ax)) \\
+    &= \mathbb{E}[-\log h(Y) | X=x] + \log h(Ax) - \langle \mathbb{E}[T(Y) | X=x] - T(Ax), \eta(z) \rangle + \phi(Ax) - \phi(Ax) \\
+    &= \mathbb{E}[-\log h(Y) | X=x] + \log h(Ax) - \langle \mathbb{E}[T(Y) | X=x] - T(Ax), \eta(z) \rangle
 \end{align*}
-For this quantity to be independent of $z$, we need the term $\langle \mathbb{E}[T(Y) | X=x] - T(x), \eta(z) \rangle$ to vanish, which is equivalent to having $\mathbb{E}[T(Y) | X=x] = T(x)$, hence Proposition \ref{prop:ef_n2n}.
+For this quantity to be independent of $z$, we need the term $\langle \mathbb{E}[T(Y) | X=x] - T(Ax), \eta(z) \rangle$ to vanish, which is equivalent to having $\mathbb{E}[T(Y) | X=x] = T(Ax)$, hence Proposition \ref{prop:ef_n2n}.
 \begin{proposition}
     \label{prop:ef_n2n}
     A noise model belonging to the exponential family associated with its corresponding negative log-likelihood loss function satisfies the Noise2Noise property \eqref{eq:n2n_compatible} if and only if the sufficient statistic $T(Y)$ is an unbiased estimator of $T(X)$ :
     \begin{equation}
-        \mathbb{E}[T(Y) | X=x] = T(x)
+        \mathbb{E}[T(Y) | X=x] = T(Ax)
     \end{equation}
 \end{proposition}
 \noindent Note that this property of the sufficient statistics is satisfied for Gaussian and Poisson distributions as we have already seen in Proposition \ref{prop:noise2noise_l2} and \ref{prop:noise2noise_poisson}
 but also for other distributions like the Bernoulli distribution, the Exponential distribution, or the Gamma distribution.
 On the other hand, the log-normal distribution belongs to the exponential family but its sufficient statistic is $T(Y) = (\log Y, (\log Y)^2)$.
-$\mathbb{E}[\log Y | X=x] = \log x - \frac{\sigma^2}{2}$ and $\mathbb{E}[(\log Y)^2 | X=x] = (\log x)^2 + \sigma^2 - \sigma^2 \log x + \frac{\sigma^4}{4}$, hence the sufficient statistic is not an unbiased estimator of $T(X) = (\log X, (\log X)^2)$.
+$\mathbb{E}[\log Y | X=x] = \log Ax - \frac{\sigma^2}{2}$ and $\mathbb{E}[(\log Y)^2 | X=x] = (\log Ax)^2 + \sigma^2 - \sigma^2 \log Ax + \frac{\sigma^4}{4}$, hence the sufficient statistic is not an unbiased estimator of $T(X) = (\log X, (\log X)^2)$.
 
 
 \subsection{Extension to Bregman Geometry}
@@ -484,7 +478,7 @@ $\mathbb{E}[\log Y | X=x] = \log x - \frac{\sigma^2}{2}$ and $\mathbb{E}[(\log Y
 
 In this section, we study the potential Noise2Noise guarantees in the context of Bregman geometry, which is a generalization of the Euclidean geometry, the MSE loss function or any other loss function that can be expressed as a Bregman divergence.
 \begin{definition}
-Let $\phi: \mathbb{R}^d \to \mathbb{R}$ be a strictly convex and differentiable function. The Bregman divergence associated with $\phi$ is defined as :
+Let $\phi: \mathcal{Y} \to \mathbb{R}$ be a strictly convex and differentiable function. The Bregman divergence associated with $\phi$ is defined as :
 \begin{equation}
     \label{bregman_divergence}
     D_\phi(z, y) = \phi(z) - \phi(y) - \langle \nabla \phi(y), z - y \rangle
@@ -512,46 +506,46 @@ We can now state the following propositions regarding the Noise2Noise framework 
 
 \begin{proposition}
     \label{prop:b_target_first}
-    If noise is centered, i.e. $\mathbb{E}[Y | X=x] = x$, then \textbf{target-first} Bregman divergence associated to any noise model satisfies the Noise2Noise property \eqref{eq:n2n_compatible}.
+    If noise is centered, i.e. $\mathbb{E}[Y | X=x] = Ax$, then \textbf{target-first} Bregman divergence associated to any noise model satisfies the Noise2Noise property \eqref{eq:n2n_compatible}.
 \end{proposition}
 \begin{proof}
     We derive the noise-induced loss bias in the context of Bregman geometry with target-first Bregman divergence :
     \begin{align*}
-        \Delta_\rho(z, x) &= \mathbb{E}[D_\phi(Y, z) | X=x] - D_\phi(x, z) \\
-        &= \mathbb{E}[\phi(Y) - \phi(z) - \langle \nabla \phi(z), Y - z \rangle | X=x] - (\phi(x) - \phi(z) - \langle \nabla \phi(z), x - z \rangle) \\
-        &= \mathbb{E}[\phi(Y) | X=x] - \phi(x) + \langle \nabla \phi(z), x - \mathbb{E}[Y | X=x] \rangle
+        \Delta_\rho(z, Ax) &= \mathbb{E}[D_\phi(Y, z) | X=x] - D_\phi(Ax, z) \\
+        &= \mathbb{E}[\phi(Y) - \phi(z) - \langle \nabla \phi(z), Y - z \rangle | X=x] - (\phi(Ax) - \phi(z) - \langle \nabla \phi(z), Ax - z \rangle) \\
+        &= \mathbb{E}[\phi(Y) | X=x] - \phi(Ax) + \langle \nabla \phi(z), Ax - \mathbb{E}[Y | X=x] \rangle
     \end{align*}
-The term in $z$ vanishes as $\mathbb{E}[Y | X=x] = x$.
+The term in $z$ vanishes as $\mathbb{E}[Y | X=x] = Ax$.
 \end{proof}
 \noindent Proposition \ref{prop:b_target_first} states that any target-first Bregman divergence suits the Noise2Noise framework, but the performance of the resulting estimator will depend on the choice of the Bregman divergence which has to be adapted to the noise model.
 \begin{proposition}
     A \textbf{prediction-first} Bregman divergence associated with any noise model satisfies the Noise2Noise property \eqref{eq:n2n_compatible} if and only if the following condition holds :
     \begin{equation}
         \label{prop:b_prediction_first}
-        \mathbb{E}[\nabla \phi(Y) | X=x] = \nabla \phi(x)
+        \mathbb{E}[\nabla \phi(Y) | X=x] = \nabla \phi(Ax)
     \end{equation}
-    If we also assume that the noise is centered, i.e, $\mathbb{E}[Y | X=x] = x$, then this condition is equivalent to $\phi$ being a quadratic function :
+    If we also assume that the noise is centered, i.e, $\mathbb{E}[Y | X=x] = Ax$, then this condition is equivalent to $\phi$ being a quadratic function :
     \begin{equation}
         \phi(z) = \frac{1}{2} z^T Q z + b^T z + c
     \end{equation}
-    with $Q$ a positive definite matrix, $b \in \mathbb{R}^d$ and $c \in \mathbb{R}$.
+    with $Q$ a positive definite matrix, $b \in \mathcal{Y}$ and $c \in \mathbb{R}$.
 \end{proposition}
 
 \begin{proof}
 We derive the noise-induced loss bias in the context of Bregman geometry with prediction-first Bregman divergence :
 \begin{align*}
-    \Delta_\rho(z, x) &= \mathbb{E}[D_\phi(z, Y) | X=x] - D_\phi(z, x) \\
-    &= \mathbb{E}[\phi(z) - \phi(Y) - \langle \nabla \phi(Y), z - Y \rangle | X=x] - (\phi(z) - \phi(x) - \langle \nabla \phi(x), z - x \rangle) \\
-    &= -\mathbb{E}[\phi(Y) | X=x] + \phi(x) - \mathbb{E}[\langle \nabla \phi(Y), z - Y \rangle | X=x] + \langle \nabla \phi(x), z - x \rangle
+    \Delta_\rho(z, Ax) &= \mathbb{E}[D_\phi(z, Y) | X=x] - D_\phi(z, Ax) \\
+    &= \mathbb{E}[\phi(z) - \phi(Y) - \langle \nabla \phi(Y), z - Y \rangle | X=x] - (\phi(z) - \phi(Ax) - \langle \nabla \phi(Ax), z - Ax \rangle) \\
+    &= -\mathbb{E}[\phi(Y) | X=x] + \phi(Ax) - \mathbb{E}[\langle \nabla \phi(Y), z - Y \rangle | X=x] + \langle \nabla \phi(Ax), z - Ax \rangle
 \end{align*}
-Let $g_x(z) = \mathbb{E}[\langle \nabla \phi(Y), z - Y \rangle | X=x] - \langle \nabla \phi(x), z - x \rangle$, we have $g_x'(z) = \mathbb{E}[\nabla \phi(Y) | X=x] - \nabla \phi(x)$.
-In order to apply Corollary \ref{coro:delta}, we need $g_x'(z) = 0$ for all $z$, which is equivalent to $\mathbb{E}[\nabla \phi(Y) | X=x] = \nabla \phi(x)$.
+Let $g_x(z) = \mathbb{E}[\langle \nabla \phi(Y), z - Y \rangle | X=x] - \langle \nabla \phi(Ax), z - Ax \rangle$, we have $g_x'(z) = \mathbb{E}[\nabla \phi(Y) | X=x] - \nabla \phi(Ax)$.
+In order to apply Corollary \ref{coro:delta}, we need $g_x'(z) = 0$ for all $z$, which is equivalent to $\mathbb{E}[\nabla \phi(Y) | X=x] = \nabla \phi(Ax)$.
 It remains to be shown that this condition is equivalent to the gradient of $\phi$ being affine.
 If noise is centered, then we can write $\mathbb{E}[\nabla \phi(Y) | X=x] = \nabla \phi(\mathbb{E}[Y | X=x])$.
 We denote $g(z) = \nabla \phi(z)$, then the condition becomes $g(\mathbb{E}[Y | X=x]) = \mathbb{E}[g(Y) | X=x]$.
 If $g$ is affine, the result is immediate. Conversely, if the condition holds for all $x$, then we can write $g(\mathbb{E}[Y | X=x]) = \mathbb{E}[g(Y) | X=x]$ for any random variable $Y$ with finite expectation.
 For a two-point distribution $Y \sim p \delta_{y_1} + (1-p) \delta_{y_2}$, we have $\mathbb{E}[Y] = p y_1 + (1-p) y_2$ and $\mathbb{E}[g(Y)] = p g(y_1) + (1-p) g(y_2)$, hence $g(p y_1 + (1-p) y_2) = p g(y_1) + (1-p) g(y_2)$ for all $y_1, y_2$ and $p \in [0, 1]$, which is the definition of an affine function.
-By integrating, we obtain that $\phi(x) = \frac{1}{2} x^T Q x + b^T x + c$ and the strict convexity of $\phi$ implies that $Q$ is positive definite.
+By integrating, we obtain that $\phi(Ax) = \frac{1}{2} (Ax)^T Q Ax + b^T Ax + c$ and the strict convexity of $\phi$ implies that $Q$ is positive definite.
 \end{proof}
 
 \subsubsection{Mahalanobis distance and correlated noise}
