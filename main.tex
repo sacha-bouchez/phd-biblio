@@ -9,7 +9,9 @@
 \usepackage{amsmath}
 \usepackage{amsfonts}
 \usepackage{hyperref}
-
+\usepackage{titlesec}
+\setcounter{secnumdepth}{3} % Para numerar hasta \paragraph
+\setcounter{tocdepth}{3}    % Para que aparezca en el índice
 \usepackage[acronym]{glossaries}
 
 \edef\restoreparindent{\parindent=\the\parindent\relax}
@@ -66,6 +68,7 @@
 \addbibresource{reference/optim.bib}
 \addbibresource{reference/self_supervised.bib}
 \addbibresource{reference/pnp.bib}
+\addbibresource{reference/misc.bib}
 
 %
 \usepackage{indentfirst}

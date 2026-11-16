@@ -1,8 +1,461 @@
 \chapter{Plug-and-play methods and Regularization by denoising}
 
-\section{Optimization methods for inverse problems}
+\section{First-order Optimization Methods for Inverse problems}
 
-\subsection{Majorization-Minimization algorithms}
+\subsection{Mathematical background on optimization}
+
+\subsubsection{Subgradients and subdifferentials}
+
+In the case of single-variable functions, the \textit{sub-derivative} of a convex function $f: I \to \mathbb{R}$ at a point $x_0$ in the interior of $I$ is defined as the slope $s$ of a line that lies below the graph of $f$ and passes through the point $(x_0, f(x_0))$. $s$ thus satisfies the following inequality:
+\begin{equation}
+    f(x)\geq f(x_0) + s (x - x_0), \quad \forall x \in I
+\end{equation}
+It is possible to prove that the set of all sub-derivatives at a point $x_0$ is a non-empty closed interval, which is called the \textit{sub-differential} of $f$ at $x_0$.
+
+
+\begin{figure}
+    \centering
+    \begin{minipage}{0.55\textwidth}
+        \centering
+        
+        \begin{tikzpicture}[scale=1.0]
+
+            % Grid
+            \draw[very thin,color=gray!25] (-3,-1) grid (3,3);
+
+            % Axes
+            \draw[->] (-3.2,0) -- (3.3,0) node[right] {$x$};
+            \draw[->] (0,-0.8) -- (0,3.2) node[above] {$f(x)$};
+
+            % Absolute value function
+            \draw[black,very thick,domain=-2.8:0,samples=50]
+                plot (\x,{-\x});
+            \draw[black,very thick,domain=0:2.8,samples=50]
+                plot (\x,\x)
+                node[right] {$f(x)=|x|$};
+
+            % Supporting lines at x=0
+            \draw[gray,dashed,thick,domain=-2:2]
+                plot (\x,{\x / 2})
+                node[right] {$v=\frac{1}{2}$};
+
+            \draw[gray,dashed,thick,domain=-2:2]
+                plot (\x,{-\x / 3})
+                node[left] {$v=-\frac{1}{3}$};
+
+            % Point of nondifferentiability
+            \filldraw[black] (0,0) circle (2pt);
+            \node[below left] at (0,0) {$x=0$};
+
+        \end{tikzpicture}
+    \end{minipage}
+    \begin{minipage}{0.40\textwidth}
+        \begin{equation*}
+            \partial f(x) = \begin{cases}
+                \{-1\}, & x < 0 \\
+                [-1, 1], & x = 0 \\
+                \{1\}, & x > 0
+            \end{cases}
+        \end{equation*}
+
+    \end{minipage}
+    \caption{
+        Illustration of the sub-differential of the absolute value function $f(x) = |x|$.
+    }
+    \label{fig:subdifferential_absolute_value}
+\end{figure}
+
+This notion can be generalized to multi-variable functions $f: \mathcal{X} \to \mathbb{R}$, where the sub-differential of $f$ at a point $x_0$ is defined as the set of all \textit{sub-gradient} vectors.
+
+\begin{definition}{Sub-gradient}
+    Let $f: \mathcal{X} \to \mathbb{R}$ be a proper convex function. $s \in \mathcal{X}$ is called a sub-gradient of $f$ at $x_0 \in \mathcal{X}$ if one of the following equivalent conditions is satisfied:
+    \begin{enumerate}
+        \item $\forall x \in \mathcal{X}, D_{x_0} f(x) \geq \langle s, x \rangle$
+        \item $\forall y \in \mathcal{X}, f(y) \geq f(x_0) + \langle s, y - x_0 \rangle$
+        \item $x_0 \in \argmin_{x \in \mathcal{X}} f(x) - \langle s, x \rangle$
+        \item $f^*(s) + f(x_0) \leq \langle s, x_0 \rangle$
+        \item $f^*(s) + f(x_0) = \langle s, x_0 \rangle$
+    \end{enumerate}
+    where $D_{x_0} f(x)$ is the directional derivative of $f$ at $x_0$ in the direction of $x$ and $\langle \cdot, \cdot \rangle$ is the inner product in $\mathcal{X}$ and $f^*$ is the convex conjugate of $f$.
+\end{definition}
+
+\begin{definition}{Sub-differential}
+    The sub-differential of a proper convex function $f: \mathcal{X} \to \mathbb{R}$ at a point $x_0 \in \mathcal{X}$ is defined as the set of all sub-gradients of $f$ at $x_0$:
+    \begin{equation}
+        \partial f(x_0) = \{ s \in \mathcal{X} : s \text{ is a sub-gradient of } f \text{ at } x_0\}
+    \end{equation}
+\end{definition}
+
+\subsubsection{Convexity}
+
+\begin{definition}{Convexity}
+    A function $f: \mathcal{X} \to \mathbb{R}$ is said to be convex if it satisfies the Jensen's inequality:
+    \begin{equation}
+        \forall x, y \in \mathcal{X}, \lambda \in [0, 1]: f(\lambda x + (1 - \lambda) y) \leq \lambda f(x) + (1 - \lambda) f(y)
+    \end{equation}
+    \label{def:convexity}
+\end{definition}
+
+\begin{definition}{Limit superior and limit inferior}
+    Let $(x_k)_{k \in \mathbb{N}}$ be a sequence in $\mathcal{X}$, the limit superior and limit inferior of the sequence are defined as:
+    \begin{equation}
+        \limsup_{k \to \infty} x_k = \lim_{k \to \infty} \sup_{n \geq k} x_n
+    \end{equation}
+    and
+    \begin{equation}
+        \liminf_{k \to \infty} x_k = \lim_{k \to \infty} \inf_{n \geq k} x_n
+    \end{equation}
+    \label{def:limit_superior_inferior}
+\end{definition}
+
+\begin{definition}{Lower semi-continuous function}
+    A function $f: \mathcal{X} \to \mathbb{R}$ is said to be lower semi-continuous if for every sequence $(x_k)_{k \in \mathbb{N}}$ that converges to $x$, we have:
+    \begin{equation}
+        f(x) \leq \liminf_{k \to \infty} f(x_k)
+    \end{equation}
+    \label{def:lower_semi_continuous}
+\end{definition}
+
+\begin{definition}{Proper function}
+    A function $f: \mathcal{X} \to \mathbb{R}$ is said to be proper if it is not identically equal to $+\infty$ and it never takes the value $-\infty$.
+    \label{def:proper_function}
+\end{definition}
+
+\begin{definition}
+    We will denote the set of proper, lower semi-continuous and convex functions on $\mathcal{X}$ as $\Gamma_0(\mathcal{X})$.
+\end{definition}
+
+\begin{definition}{Coercive function}
+    A function $f: \mathcal{X} \to \mathbb{R}$ is said to be coercive if:
+    \begin{equation}
+        \lim_{\|x\| \to \infty} f(x) = +\infty
+    \end{equation}
+    \label{def:coercive_function}
+\end{definition}
+
+\begin{proposition}
+    Let $f: \mathcal{X} \to \mathbb{R}$ be a proper, lower semi-continuous and convex function. If $f$ is coercive, then the minimization problem:
+    \begin{equation}
+        \min_{x \in \mathcal{X}} f(x)
+    \end{equation}
+    admits at least one solution. Moreover, the solution is a global minimizer of $f$.
+    \label{prop:coercive_function_minimization}
+\end{proposition}
+\begin{proof}
+    Let $(x_k)_{k \in \mathbb{N}}$ be a minimizing sequence of $f$, i.e. a sequence such that:
+    \begin{equation}
+        \lim_{k \to \infty} f(x_k) = \inf_{x \in \mathcal{X}} f(x)
+    \end{equation}
+    Since $f$ is coercive, the sequence $(x_k)_{k \in \mathbb{N}}$ is bounded and thus admits a convergent subsequence $(x_{k_j})_{j \in \mathbb{N}}$ that converges to some $x^* \in \mathcal{X}$.
+    Since $f$ is lower semi-continuous, we have:
+    \begin{equation}
+        f(x^*) \leq \liminf_{j \to \infty} f(x_{k_j}) = \inf_{x \in \mathcal{X}} f(x)
+    \end{equation}
+    which shows that $x^*$ is a minimizer of $f$. Using the convexity of $f$, we can show that $x^*$ is a global minimizer of $f$.
+\end{proof}
+
+
+\subsubsection{Proximity operators and Moreau envelope}
+
+\begin{definition}{Proximal operator}
+    Let $g: \mathcal{X} \to \mathbb{R}$ be a proper, lower semi-continuous and convex function.
+    For every $x$, the minimization problem
+    \begin{equation}
+        \argmin_{y \in \mathcal{X}} \left\{ g(y) + \frac{1}{2} \|y - x\|_2^2 \right\}
+    \end{equation}
+    admits a unique solution \cite{Moreau1962}, which is called the \textit{proximal operator} of $g$ at $x$ and that we will denote as $\text{prox}_g(x)$.
+    \label{def:proximal_operator_quad}
+\end{definition}
+
+The proximal operator of a convex function $g$ can be seen as a generalization of the projection operator onto a convex set, where the function $g$ can be seen as a penalty function that measures the distance to the set.
+For example, let $g$ be the indicator function of a convex set $C$, i.e. $g(x) = 0$ if $x \in C$ and $g(x) = +\infty$ otherwise.
+Then the proximal operator of $g$ is just the projection operator onto the set $C$:
+\begin{equation}
+    \text{prox}_g(x) = \argmin_{y \in C} \|y - x\|_2^2
+\end{equation}
+If $C$ is the set of non-negative real numbers, then the proximal operator of $g$ is just the projection onto the non-negative orthant:
+\begin{equation}
+    \text{prox}_g(x) = \max(0, x)
+\end{equation}
+
+Proximal operators can also be seen as denoising operators under the maximum a posteriori (MAP) estimation framework for additive Gaussian noise. Let $x$ be the clean signal and $y = x + n$ be the noisy observation, where $n \sim \mathcal{N}(0, \sigma^2 I)$ is the additive Gaussian noise. The MAP estimate of $x$ given $y$ is given by:
+\begin{equation}
+    \hat{x} = \argmax_x p(x|y) = \argmax_x p(y|x) p(x)
+\end{equation}
+Taking the negative logarithm of the posterior distribution and using Bayes' theorem, we can rewrite the MAP estimation problem as:
+\begin{equation}
+    \hat{x} = \argmin_x -\log p(y|x) -\log p(x)
+\end{equation}
+Assuming that the noise is Gaussian, we have $p(y|x) \propto \exp\left(-\frac{1}{2\sigma^2} \|y - x\|_2^2\right)$, and we can rewrite the MAP estimation problem as:
+\begin{equation}
+    \hat{x} = \argmin_x \frac{1}{2\sigma^2} \|y - x\|_2^2 - \log p(x) = \text{prox}_{\sigma^2 (-\log p)}(y)
+\end{equation}
+
+Among the most used proximal algorithm, we can mention $l_1$-norm regularization:
+\begin{equation}
+    g(x) = \lambda \|x\|_1
+\end{equation}
+which leads to the following proximal operator:
+\begin{equation}
+    \text{soft}(x, \lambda) = \text{sign}(x) \max(|x| - \lambda, 0)
+\end{equation}
+The interpretation of the latter is denoising with Laplace prior, meaning that we aim to remove small coefficients which are likely to be noise while higher coefficients (above the threshold $\lambda$) are likely to be signal and are kept.
+Quadratic regularization is also widely used:
+\begin{equation}
+    g(x) = \frac{\lambda}{2} \|Dx\|_2^2
+\end{equation}
+which leads to the following proximal operator:
+\begin{equation}
+    \text{prox}_g(x) = (I + \lambda D^T D)^{-1} x
+\end{equation}
+with $D$ being a linear operator, for instance a finite difference operator or a wavelet transform that will behave like a smoothing operator if chosen appropriately.
+
+\paragraph{Bregman Proximal operators}
+
+The previous definition of proximal operator can be generalized beyond the euclidian framework by using Bregman divergences, which we recall hereafter.
+\begin{definition}{Bregman divergence}
+    Let $\phi: \mathcal{X} \to \mathbb{R}$ be a strictly convex and differentiable potential function. The Bregman divergence associated with $\phi$ is defined as:
+    \begin{equation}
+        D_{\phi}(x, y) = \phi(x) - \phi(y) - \langle \nabla \phi(y), x - y \rangle
+    \end{equation}
+    \label{def:bregman_divergence}
+\end{definition}
+\begin{definition}{Bregman proximal operator}
+    Let $g: \mathcal{X} \to \mathbb{R}$ be a proper, lower semi-continuous and convex function and let $\phi: \mathcal{X} \to \mathbb{R}$ be a strictly convex and differentiable potential function.
+    For every $x$, the minimization problem
+    \begin{equation}
+        \argmin_{y \in \mathcal{X}} \left\{ g(y) + D_{\phi}(y, x) \right\}
+    \end{equation}
+    admits a unique solution \cite{Chen1993}, which is called the \textit{Bregman proximal operator} of $g$ at $x$ with respect to $\phi$ and that we will denote as $\text{prox}_g^{\phi}(x)$.
+    \label{def:bregman_proximal_operator}
+\end{definition}
+This generalization led to the development of the \acrfull{md} algorithm \cite{nemirovsky1983problem} which is a generalization of the \acrfull{gd} algorithm that uses Bregman divergences instead of the euclidean distance to define the update step.
+
+\paragraph{Moreau envelope}
+
+\subsubsection{Convex Conjugate}
+
+
+
+\subsubsection{Convergence by Fixed-Point theory}
+
+In this section, $\mathcal{X}$ is an Hilbert space and we denote as $T: \mathcal{X} \to \mathcal{X}$ an operator that is used to define the update rule of an optimization algorithm:
+\begin{equation}
+    x_{k+1} = T(x_k)
+\end{equation}
+For example, the \acrshort{pgd} algorithm can be seen as a fixed-point iteration with the operator $T = \text{prox}_{\alpha g} \circ (I - \alpha \nabla f)$.
+
+\begin{definition}{Nonexpansiveness}
+    Let $T: \mathcal{X} \to \mathcal{X}$ be an operator. $T$ is said to be nonexpansive if it is $1$-Lipschitz continuous, i.e.:
+    \begin{equation}
+        \forall x, y \in \mathcal{X}, \|T(x) - T(y)\| \leq \|x - y\|
+    \end{equation}
+\end{definition}
+
+\begin{definition}{$\mu$-averaged nonexpansiveness}
+    Let $T: \mathcal{X} \to \mathcal{X}$ be an operator and $\mu \in ]0, 1]$. $T$ is said to be $\mu$-averaged nonexpansive if:
+    \begin{equation}
+        \forall x, y \in \mathcal{X}, \|T(x) - T(y)\|^2 \leq \|x - y\|^2 - \frac{1 - \mu}{\mu} \|(I - T)(x) - (I - T)(y)\|^2
+    \end{equation}
+\end{definition}
+
+\begin{definition}{Firm nonexpansiveness}
+    Let $T: \mathcal{X} \to \mathcal{X}$ be an operator. $T$ is said to be firmly nonexpansive if it is $\mu$-averaged nonexpansive with $\mu = 1/2$.
+\end{definition}
+
+\begin{proposition}{Nonexpansiveness}
+    Let $T: \mathcal{X} \to \mathcal{X}$ be an operator. $T$ is said to be nonexpansive if and only if it is $\mu$-averaged nonexpansive with $\mu = 1$.
+\end{proposition}
+
+\begin{theorem}{Banach-Picard fixed-point theorem \cite{bauschke2017convex}}
+    Let $T: \mathcal{X} \to \mathcal{X}$ be a $L$-Lipschitz continuous operator with $0 \leq L < 1$. Then $T$ admits a unique fixed point $x^* \in \mathcal{X}$ and the sequence $(x_k)_{k \in \mathbb{N}}$ generated by the fixed-point iteration $x_{k+1} = T(x_k)$ converges strongly to $x^*$.
+\end{theorem}
+
+\begin{proof}
+    Let $x_1^*$ and $x_2^*$ be two fixed points of $T$. Then we have:
+    \begin{equation*}
+        \|x_1^* - x_2^*\| = \|T(x_1^*) - T(x_2^*)\| \leq L \|x_1^* - x_2^*\|
+    \end{equation*}
+    Hence,
+    \begin{equation*}
+        0 \leq (1 - L) \|x_1^* - x_2^*\| \leq 0
+    \end{equation*}
+    This implies that $\|x_1^* - x_2^*\| = 0$, and thus $x_1^* = x_2^*$ as $L < 1$. Therefore, $T$ admits a unique fixed point $x^* \in \mathcal{X}$.
+    For all $k \in \mathbb{N}$, we have:
+    \begin{equation*}
+        \|x_{k+1} - x^*\| = \|T(x_k) - T(x^*)\| \leq L \|x_k - x^*\|
+    \end{equation*}
+    By induction, we have:
+    \begin{equation*}
+        \|x_{k} - x^*\| \leq L^{k} \|x_0 - x^*\|
+    \end{equation*}
+    This shows that the sequence $(x_k)_{k \in \mathbb{N}}$ converges strongly to the fixed point $x^*$ as $L < 1$.
+\end{proof}
+
+\begin{lemma}{Opial's Lemma \cite{Opial1967Weak}}
+    Let $C$ be a non-empty subset of $\mathcal{X}$ and let $(x_k)_{k \in \mathbb{N}}$ be a sequence in $\mathcal{X}$ such that:
+    \begin{enumerate}
+        \item For every $x \in C$, the sequence $(\|x_k - x\|)_{k \in \mathbb{N}}$ converges.
+        \item Every weak cluster point of $(x_k)_{k \in \mathbb{N}}$ belongs to $C$.
+    \end{enumerate}
+    Then $(x_k)_{k \in \mathbb{N}}$ converges weakly to a point in $C$.
+\end{lemma}
+
+\begin{theorem}{Krasnosel'skii–Mann iteration \cite{bauschke2017convex}}
+    Let $T: \mathcal{X} \to \mathcal{X}$ be a $\mu$-averaged nonexpansive operator with at least one fixed point and with $\mu \in ]0, 1[$.
+    Then the sequence $(x_k)_{k \in \mathbb{N}}$ generated by the fixed-point iteration $x_{k+1} = T(x_k)$ converges weakly to a fixed point of $T$.
+    In finite dimensional spaces, the convergence is strong.
+\end{theorem}
+
+\begin{proof}
+    Let $x^*$ be a fixed point of $T$, i.e., $T(x^*) = x^*$. Then, for any $k \in \mathbb{N}$, we have:
+    \begin{align*}
+        \|x_{k+1} - x^*\| = \|T(x_k) - T(x^*)\| &\leq \|x_k - x^*\| - \frac{1 - \mu}{\mu} \|(I - T)(x_k) - (I - T)(x^*)\| \\
+        &= \|x_k - x^*\| - \frac{1 - \mu}{\mu} \|(I - T)(x_k)\|
+    \end{align*}
+    Since $\mu \in ]0, 1[$, we have $\frac{1 - \mu}{\mu} > 0$, and thus the sequence $(x_k)_{k \in \mathbb{N}}$ is non-increasing in terms of distance to the fixed point $x^*$:
+    \begin{equation*}
+        \|x_{k+1} - x^*\| - \|x_k - x^*\| \leq - \frac{1 - \mu}{\mu} \|(I - T)(x_k)\| \leq 0
+    \end{equation*}
+    Thus, the sequence $(\|x_k - x^*\|)_{k \in \mathbb{N}}$ is positive and decreasing, hence, bounded and convergent.
+    The sequence $(x_k)_{k \in \mathbb{N}}$ is also bounded and thus admits a convergent subsequence $(x_{k_j})_{j \in \mathbb{N}}$ that converges weakly to some $x^{**} \in \mathcal{X}$.
+    Since $T$ is $\mu$-averaged nonexpansive, thus Lipschitz continuous, we have:
+    \begin{equation*}
+        \|x^{**} - x^*\| - \|x^{**} - x^*\| = 0 \leq - \frac{1 - \mu}{\mu} \|(x^{**} - T(x^{**}))\| \leq 0
+    \end{equation*}
+    Thus, $\|(x^{**} - T(x^{**}))\| = 0$, which implies that $x^{**}$ is a fixed point of $T$. We have proven that weak cluster points of the sequence $(x_k)_{k \in \mathbb{N}}$ are fixed points of $T$.
+    We can conclude with Opial's lemma that the sequence $(x_k)_{k \in \mathbb{N}}$ converges weakly to a fixed point of $T$. In finite dimensional spaces, the convergence is strong as weak convergence and strong convergence are equivalent.
+\end{proof}
+
+\subsubsection{Convergence of non-convex optimization algorithms}
+
+
+
+
+\subsection{Primal Proximal Algorithms}
+
+
+Proximal algorithms are used in a wide range of optimization procedures. In this section, we will use the following optimization primal problem as a running example:
+\begin{equation}
+    \min_{x \in \mathcal{X}} f(x) + g(x)
+    \label{eq:proximal_problem}
+\end{equation}
+where $f$ is a smooth convex function (which will be our data fidelity term) and $g$ is a non-smooth convex function (which will be our regularization term). The proximal operator of $g$ is used to handle the non-smoothness of $g$ in the optimization problem.
+
+\subsubsection{\texorpdfstring{\acrfull{pgd}}{PGD}}
+
+While the \acrshort{gd} algorithm is used to minimize smooth functions with the following update rule:
+\begin{equation}
+    x_{k+1} = x_k - \alpha_k \nabla f(x_k)
+\end{equation}
+the \acrshort{pgd} algorithm (also called the \acrfull{fb} algorithm) is used to minimize non-smooth functions with the following update rule:
+\begin{equation}
+    x_{k+1} = \text{prox}_{\alpha_k g}(x_k - \alpha_k \nabla f(x_k))
+    \label{eq:pgd_update_rule}
+\end{equation}
+with $\alpha_k$ being the step size at iteration $k$.
+The \acrfull{fista} algorithm \cite{Beck2009} is an accelerated version of the \acrshort{pgd} algorithm that uses a momentum term to speed up the convergence of the algorithm as shown in the following update rule:
+\begin{equation}
+    \begin{cases}
+        x_k &= z_k - \gamma \nabla f(z_k) \\
+        x_{k+1} &= \text{prox}_{\gamma \lambda g}(x_k) \\
+        z_{k+1} &= x_{k+1} + \frac{k + a - 1}{k + a} (x_{k+1} - x_k)
+    \end{cases}
+\end{equation}
+where $\gamma$ is the step size, $\lambda$ is the regularization parameter and $a$ is a momentum parameter. $\gamma$ must satisfy $0 < \gamma < \frac{1}{L}$ with $L$ being the Lipschitz constant of $\nabla f$.
+
+\begin{theorem}{\acrshort{pgd} convergence \cite{Combettes2005}}
+    Let $f$ be a $L$-Lipschitz differentiable function and $g$ a proper, lower semi-continuous and convex function. Let $(x_k)_{k \in \mathbb{N}}$ be the sequence generated by the \acrshort{pgd} algorithm with a constant step size $\alpha_k = \alpha \in ]0, 2/L[$.
+    \begin{enumerate}
+        \item $(x_k)_{k \in \mathbb{N}}$ converges to a minimizer of $f + g$.
+        \item $(f(x_k) + g(x_k))_{k \in \mathbb{N}}$ is a non-increasing sequence that converges to the minimum value of $f + g$.
+    \end{enumerate}
+\end{theorem}
+
+\subsubsection{\texorpdfstring{\acrfull{hqs}}{HQS}}
+
+The \acrshort{hqs} algorithm, proposed by \cite{Geman1995} aims to minimize a similar functional as in \eqref{eq:proximal_problem}.
+This method adds a quadratic term to the objective function:
+\begin{equation}
+    \min_{x, v \in \mathcal{X}} f(x) + g(v) + \frac{\rho}{2} \|x - v\|_2^2
+\end{equation}
+and then alternates between minimizing the original function and the quadratic term, leading to the following update rules:
+\begin{equation}
+    \begin{cases}
+        x_{k+1} &= \argmin_x f(x) + \frac{\rho}{2} \|x - v_k\|_2^2 \\
+        v_{k+1} &= \argmin_v g(v) + \frac{\rho}{2} \|x_{k+1} - v\|_2^2
+    \end{cases}
+\end{equation}
+with $\rho$ being a penalty parameter that controls the trade-off between the original function and the quadratic term.
+
+\subsubsection{\texorpdfstring{\acrfull{drs}}{DRS}}
+
+\begin{definition}{Reflected proximity operator}
+    Let $g: \mathcal{X} \to \mathbb{R}$ be a proper, lower semi-continuous and convex function.
+    For every $x$, the reflected proximal operator of $g$ at $x$ is defined as:
+    \begin{equation}
+        R_g(x) = 2 \text{prox}_g(x) - x
+    \end{equation}
+    \label{def:reflected_proximal_operator}
+\end{definition}
+
+The \Acrshort{drs} algorithm \cite{Douglas1956OnTN} uses the \textit{reflected proximity operator} to alternate between proximal steps of the two functions $f$ and $g$ in the optimization problem \eqref{eq:proximal_problem} using the following update in the most general case:
+\begin{equation}
+    x_{k+1} = \beta R_{\gamma \lambda g}(R_{\gamma f}(x_k)) + (1 - \beta) x_k
+\end{equation}
+where $\gamma$ is the step size, $\lambda$ is the regularization parameter and $\beta \in ]0,1]$, is a relaxation parameter that controls the trade-off between the two reflected proximal operators.
+Choosing $\beta = 1$ is referred to as the \acrfull{prs} algorithm which lead to the following update rules:
+\begin{equation}
+    \begin{cases}
+        y_{k+1} &= \text{prox}_{\gamma f}(x_k) \\
+        z_{k+1} &= \text{prox}_{\gamma \lambda g}(2 y_{k+1} - x_k) \\
+        x_{k+1} &= x_k + 2(z_{k+1} - y_{k+1})
+    \end{cases}
+\end{equation}
+
+\subsection{Dual Proximal Algorithms}
+
+We can formulate the dual problem of the primal problem \eqref{eq:proximal_problem} as follows:
+\begin{equation}
+    \argmin_{x, z \in \mathcal{X}} f(x) + g(z) \quad \text{s.t.} \quad x - z = 0
+    \label{eq:dual_problem}
+\end{equation}
+where $z$ is an auxiliary variable that is introduced to decouple the two functions $f$ and $g$ in the optimization problem.
+
+\subsubsection{Lagrangian dual problem}
+
+
+\begin{definition}{Augmented Lagrangian}
+    Let $f: \mathcal{X} \to \mathbb{R}$ and $g: \mathcal{X} \to \mathbb{R}$ be proper, lower semi-continuous and convex functions and $z$ be a point in $\mathcal{X}$.
+    The augmented Lagrangian of $f$ and $g$ is defined as:
+    \begin{equation}
+        L_{\beta}(x, z, u) = f(x) + g(z) + \langle u, x - z \rangle + \frac{\beta}{2} \|x - z\|_2^2
+    \end{equation}
+    where $u$ is the dual variable, also called the Lagrange multiplier, $\beta > 0$ is a penalty parameter and $\langle \cdot, \cdot \rangle$ is the inner product in $\mathcal{X}$.
+\end{definition}
+
+We can solve the dual problem \eqref{eq:dual_problem} by minimizing the \textit{Augmented Lagrangian} $L_{\beta}(x, z, u)$ with respect to the primal variables $x$ and $z$ and maximizing it with respect to the dual variable $u$:
+\begin{equation}
+    \argmin_{x, z \in \mathcal{X}} \max_{u \in \mathcal{X}} L_{\beta}(x, z, u)
+\end{equation}
+Indeed, the contraint $x - z = 0$ is enforced by both the Lagrangian Multiplier $u$ and the penalty term $\frac{\beta}{2} \|x - z\|_2^2$.
+It is also possible to use the \textit{Unaugmented Lagrangian} $L(x, z, u) = f(x) + g(z) + \langle u, x - z \rangle$ instead of the augmented Lagrangian, but this is less robust in case the functions $f$ and $g$ are not strictly convex, as the dual problem might not have a unique solution. %NOTE need citation here
+In order to solve the augmented Lagrangian formulation of the optimization problem, \cite{boyd2011distributed} proposed the \acrfull{admm} algorithm, which alternates between updating the primal variable $x$ and the dual variable $u$ using the following update rules:
+\begin{equation}
+    \begin{cases}
+        u_{k+1} &= \text{prox}_{\gamma f}(x_k - z_k) \\
+        x_{k+1} &= \text{prox}_{\gamma \lambda g}(z_k + u_{k+1}) \\
+        z_{k+1} &= z_k + \beta(u_{k+1} - x_{k+1})
+    \end{cases}
+\end{equation}
+
+\subsubsection{Fenchel-Rockafellar dual problem}
+
+
+
+\subsection{\texorpdfstring{\acrfull{pd}}{PD} }
+
+\subsection{Expectation-maximization algorithms}
 
 \acrfull{mm} is a family of optimization algorithms that iteratively minimizes a surrogate function that majorizes the original objective function.
 The surrogate function is called a \textit{tangent-majorant} and is constructed such that it is easier to minimize than the original objective function.
@@ -26,7 +479,6 @@ The surrogate function is called a \textit{tangent-majorant} and is constructed 
     \end{algorithmic}
 \end{algorithm}
 
-\subsubsection{Expectation-minimization algorithms}
 
 Let $\theta \in \mathbb{R}^n$ be the probability distribution parameters to be estimated. Let $Y \in \mathbb{R}^m$ be the random variable representing the observed data and $Z \in \mathbb{R}^{m \times n}$ be the random variable representing the unobserved or latent data.
 $Z$ is an auxiliary variable that is introduced to simplify the optimization problem and the joint density $p_{Y, Z}(y, z|\theta)$ is called the \textit{complete-data likelihood}.
@@ -152,8 +604,45 @@ These algorithms can also be modified to include a regularization term incorpori
 
 \paragraph{One-Step Late Algorithm}
 
-
-
-\subsection{Proximal algorithms}
+The \acrfull{osl} algorithm is a modification of the \acrshort{mlem} algorithm proposed by \cite{green_use_1990} that incorporates a regularization term in the optimization problem \cite{green_use_1990}.
+This algorithm has been applied to emission tomography \cite{green_bayesian_1990}.
+The starting point of the \acrshort{osl} algorithm is to add a regularization term $R(x)$ to the surrogate function $Q(x, x_k)$ in the \acrshort{em} framework, which leads to the following optimization problem:
+\begin{equation}
+    x_{k+1} = \argmax_x Q(x, x_k) - \beta R(x)
+\end{equation}
+where $\beta$ is a regularization parameter that controls the trade-off between the data fidelity term and the regularization term.
+Minimizing this penalized surrogate function leads to the following update rule for the \acrshort{osl} algorithm:
+\begin{equation}
+    x_{k+1,j} = \frac{x_{k,j}}{\sum_{i=1}^{m} A_{ij} + \beta \frac{\partial R}{\partial x_j}(x_{k+1})} \sum_{i=1}^{m} y_i \frac{A_{ij}}{(Ax_k)_i}
+\end{equation}
+which is very similar to the update rule of the \acrshort{mlem} algorithm, except for the additional term $\beta \frac{\partial R}{\partial x_j}(x_{k+1})$ in the denominator, which incorporates the regularization term in the optimization problem.
+Notice that the regularization term is evaluated at the next iterate $x_{k+1}$.
+Green et al. propose the following approximation to the regularization term:
+\begin{equation}
+    \frac{\partial R}{\partial x_j}(x_{k+1}) \approx \frac{\partial R}{\partial x_j}(x_{k})
+\end{equation}
+which is why the algorithm is called \textit{one-step late}, as the regularization term is evaluated at the previous iterate $x_k$ instead of the next iterate $x_{k+1}$.
+The \acrshort{osl} algorithm is summarized in Algorithm \ref{alg:osl}.
+\begin{algorithm}
+    \caption{One-Step Late Algorithm (OSL)}
+    \begin{algorithmic}[1]
+    \State \textbf{Input:} Measured data $y$, system matrix $A$, initial estimate $x^{(0)}$, regularization parameter $\beta$, regularization function $R(x)$
+    \State \textbf{Output:} Estimated image $x^{(k)}$
+    \For{$k = 0$ to $K-1$}
+        \State \textbf{E-step:} Compute the expected number of counts
+        \begin{equation*}
+            \hat{y}_i^{(k)} = (Ax^{(k)})_i
+        \end{equation*}
+        \State \textbf{M-step:} Update the image estimate
+        \begin{equation*}
+            x_j^{(k+1)} = \frac{x_j^{(k)}}{\sum_{i=1}^{d} A_{ij} + \beta \frac{\partial R}{\partial x_j}(x^{(k)})} \sum_{i=1}^{d} A_{ij} \frac{y_i}{\hat{y}_i^{(k)}}
+        \end{equation*}
+    \EndFor
+    \State \textbf{Return} $x^{(K)}$
+    \end{algorithmic}
+    \label{alg:osl}
+\end{algorithm}
 
 \subsection{Connection between proximal algorithms and MM algorithms}
+
+\section{Plug-and-play and Regularization-by-Denoising methods}
